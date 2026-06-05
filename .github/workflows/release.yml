@@ -1,7 +1,7 @@
 name: Release
 
-# タグ v* を push するとトリガー。各OSランナーがネイティブ arch でビルドし、
-# GitHub Release（ドラフト）に成果物をアップロードする。
+# タグ v* を push するとトリガー。各OSランナーがビルドし、成果物を
+# GitHub Release（ドラフト）にアップロードする。
 on:
   push:
     tags:
@@ -50,18 +50,22 @@ jobs:
       - name: Build (electron-vite)
         run: npm run build
 
-      - name: Package & publish (electron-builder)
-        run: npx --no-install electron-builder ${{ matrix.args }} --publish always
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 発行はせずローカルにパッケージのみ作成（electron-builder の publisher は
+      # 大容量アップロードで不安定なため使わない）。
+      - name: Package (electron-builder)
+        run: npx --no-install electron-builder ${{ matrix.args }} --publish never
 
-      - name: Upload artifacts (build log fallback)
-        if: always()
-        uses: actions/upload-artifact@v4
+      # 堅牢なアップローダで Release（ドラフト）に成果物を追加。
+      # 複数ジョブが同じタグの Release を find-or-create して追記する。
+      - name: Upload to GitHub Release (draft)
+        uses: softprops/action-gh-release@v2
         with:
-          name: installers-${{ matrix.os }}
-          path: |
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          fail_on_unmatched_files: false
+          files: |
             release/*.exe
             release/*.dmg
             release/*.zip
-          if-no-files-found: ignore
+            release/*.blockmap
+            release/latest*.yml

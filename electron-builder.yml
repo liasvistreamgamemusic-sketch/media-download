@@ -64,9 +64,5 @@ mac:
 dmg:
   artifactName: ${name}-${version}-mac-${arch}.${ext}
 
-# ---- GitHub Release への発行（CI が --publish always で使用） ----
-publish:
-  provider: github
-  owner: liasvistreamgamemusic-sketch
-  repo: media-download
-  releaseType: draft # 各OSの成果物が揃ってから手動で Publish する
+# GitHub Release への発行は CI の softprops/action-gh-release が担当（.github/workflows/release.yml）。
+# electron-builder 自身の publisher は大容量アップロードで不安定なため使わない。
