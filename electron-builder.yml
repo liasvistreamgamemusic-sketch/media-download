@@ -1,0 +1,68 @@
+appId: com.liasvi.mediadownloader
+productName: Media Downloader
+copyright: Copyright © 2026 liasvistreamgamemusic-sketch
+directories:
+  buildResources: build
+  output: release
+# macOS arm64 を起動可能にするため ad-hoc 署名する（build/afterPack.cjs）
+afterPack: build/afterPack.cjs
+# 除外パターンのみ指定 → 既定の **/* に適用され、out/ と本番 node_modules（pruning 済み）
+# と package.json は残る。externalize された @electron-toolkit/* / tree-kill / zod は
+# require() で実行時に読むため node_modules を含める必要がある。
+files:
+  - "!.github"
+  - "!src"
+  - "!scripts"
+  - "!test"
+  - "!build"
+  - "!*.md"
+  - "!plan.md"
+  - "!electron.vite.config.ts"
+  - "!vitest.config.ts"
+  - "!electron-builder.yml"
+  - "!tsconfig*.json"
+# yt-dlp / ffmpeg / ffprobe（静的バイナリ）を同梱。本番では process.resourcesPath/bin に展開される。
+extraResources:
+  - from: resources/bin
+    to: bin
+    filter:
+      - "**/*"
+
+# ---- Windows: 必ず .exe で配布（インストーラ + ポータブル） ----
+win:
+  icon: build/icon.ico
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  artifactName: ${name}-${version}-win-${arch}.${ext}
+nsis:
+  oneClick: false
+  perMachine: false # ユーザー領域インストール（管理者不要、yt-dlp -U の権限問題も回避）
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Media Downloader
+portable:
+  artifactName: ${name}-${version}-win-${arch}-portable.${ext}
+
+# ---- macOS: dmg + zip（静的 ffmpeg 同梱で配布アプリとして成立） ----
+mac:
+  icon: build/icon.icns
+  category: public.app-category.utilities
+  target:
+    - target: dmg
+    - target: zip
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
+  identity: null # 署名なし配布（コードサイニング証明書が無いため）
+  hardenedRuntime: false
+dmg:
+  artifactName: ${name}-${version}-mac-${arch}.${ext}
+
+# ---- GitHub Release への発行（CI が --publish always で使用） ----
+publish:
+  provider: github
+  owner: liasvistreamgamemusic-sketch
+  repo: media-download
+  releaseType: draft # 各OSの成果物が揃ってから手動で Publish する

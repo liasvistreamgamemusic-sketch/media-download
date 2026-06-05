@@ -1,0 +1,66 @@
+name: Release
+
+# タグ v* を push するとトリガー。各OSランナーがネイティブ arch でビルドし、
+# GitHub Release（ドラフト）に成果物をアップロードする。
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: ${{ matrix.label }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: Windows (x64)
+            args: --win
+          - os: macos-14
+            label: macOS (arm64)
+            args: --mac --arm64
+          - os: macos-13
+            label: macOS (x64)
+            args: --mac --x64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Fetch yt-dlp / ffmpeg / ffprobe (static)
+        run: npm run fetch-binaries
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build (electron-vite)
+        run: npm run build
+
+      - name: Package & publish (electron-builder)
+        run: npx --no-install electron-builder ${{ matrix.args }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts (build log fallback)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: |
+            release/*.exe
+            release/*.dmg
+            release/*.zip
+          if-no-files-found: ignore

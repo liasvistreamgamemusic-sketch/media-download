@@ -1,0 +1,13 @@
+node_modules/
+out/
+dist/
+release/
+*.log
+logs/
+
+# 同梱バイナリは巨大かつプラットフォーム依存。scripts/fetch-binaries で取得する。
+resources/bin/
+
+.DS_Store
+.vscode/.debug.env
+coverage/
