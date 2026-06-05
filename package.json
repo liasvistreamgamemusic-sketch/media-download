@@ -22,7 +22,7 @@
     "fetch-binaries": "node scripts/fetch-binaries.mjs",
     "make-icons": "node scripts/make-icons.mjs",
     "package:win": "npm run build && electron-builder --win",
-    "package:mac": "npm run build && electron-builder --mac",
+    "package:mac": "npm run fetch-binaries -- --mac-universal && npm run build && electron-builder --mac --universal",
     "package:dir": "npm run build && electron-builder --dir"
   },
   "dependencies": {

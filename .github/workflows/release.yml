@@ -22,12 +22,13 @@ jobs:
           - os: windows-latest
             label: Windows (x64)
             args: --win
+            fetch: npm run fetch-binaries
+          # Apple Silicon ランナーで Intel+arm64 ユニバーサル app をビルド
+          # （Intel 専用 macos-13 ランナーの空き待ちを回避）。
           - os: macos-14
-            label: macOS (arm64)
-            args: --mac --arm64
-          - os: macos-13
-            label: macOS (x64)
-            args: --mac --x64
+            label: macOS (universal)
+            args: --mac --universal
+            fetch: npm run fetch-binaries -- --mac-universal
 
     steps:
       - uses: actions/checkout@v4
@@ -41,7 +42,7 @@ jobs:
         run: npm ci
 
       - name: Fetch yt-dlp / ffmpeg / ffprobe (static)
-        run: npm run fetch-binaries
+        run: ${{ matrix.fetch }}
 
       - name: Unit tests
         run: npm test

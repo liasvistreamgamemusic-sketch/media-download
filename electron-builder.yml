@@ -55,8 +55,12 @@ mac:
     - target: dmg
     - target: zip
   artifactName: ${name}-${version}-mac-${arch}.${ext}
-  identity: null # 署名なし配布（コードサイニング証明書が無いため）
+  identity: null # 署名なし配布（コードサイニング証明書が無いため。afterPack で ad-hoc 署名）
   hardenedRuntime: false
+  # ffmpeg は universal だが ffprobe は x86_64 のみ（ffprobe-static）。ユニバーサル
+  # マージで x64 専用ファイルとして許可する（Apple Silicon では Rosetta、無ければ
+  # yt-dlp は ffprobe 不在として扱い動作継続）。
+  x64ArchFiles: "Contents/Resources/bin/ffprobe"
 dmg:
   artifactName: ${name}-${version}-mac-${arch}.${ext}
 

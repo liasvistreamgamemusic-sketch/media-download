@@ -7,6 +7,13 @@ const { join } = require('node:path')
 
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return
+  // ユニバーサルビルドでは arch 別の一時 app（…-temp）には署名しない。署名すると
+  // _CodeSignature/CodeResources の SHA が arch 間で食い違い @electron/universal の
+  // マージが失敗する。マージ後の最終 app だけ ad-hoc 署名する。
+  if (context.appOutDir.includes('-temp')) {
+    console.log(`  • skip signing (universal temp)  ${context.appOutDir}`)
+    return
+  }
   const appName = context.packager.appInfo.productFilename
   const appPath = join(context.appOutDir, `${appName}.app`)
   console.log(`  • ad-hoc signing  ${appPath}`)
