@@ -48,7 +48,7 @@ export class YtDlpEngine implements MediaEngine {
   }
 
   async download(req: DownloadRequest, hooks: DownloadHooks): Promise<DownloadResult> {
-    const args = buildDownloadArgs(req, this.paths)
+    const args = buildDownloadArgs(req, this.paths, hooks.tempDir)
 
     let finalPath: string | null = null
     // 優先度: ExtractAudio/Merger/Fixup（最終生成物） > Destination/already

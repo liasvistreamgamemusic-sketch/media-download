@@ -7,6 +7,8 @@ export interface ProbeOptions {
 export interface DownloadHooks {
   onProgress: (p: DownloadProgress) => void
   signal: AbortSignal
+  /** 中間（断片）ファイルの隔離先。未指定なら出力先に直接書き出す。 */
+  tempDir?: string
 }
 
 /**

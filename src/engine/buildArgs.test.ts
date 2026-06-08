@@ -61,6 +61,19 @@ describe('buildDownloadArgs', () => {
     expect(args[args.indexOf('--audio-quality') + 1]).toBe('0')
   })
 
+  it('audio_mp3: forces audio-only format so video stream is never fetched', () => {
+    const args = buildDownloadArgs({ ...base, kind: 'audio_mp3' }, paths)
+    // -f が音声のみ（ba/b）。これが無いと既定の bv*+ba/b で映像も取りに行き失敗する。
+    expect(args[args.indexOf('-f') + 1]).toBe('ba/b')
+    expect(args).not.toContain('bv*+ba/b')
+  })
+
+  it('audio_mp3: explicit formatId overrides the default audio selector', () => {
+    const args = buildDownloadArgs({ ...base, kind: 'audio_mp3', formatId: '251' }, paths)
+    expect(args[args.indexOf('-f') + 1]).toBe('251')
+    expect(args).toContain('-x')
+  })
+
   it('audio_lossless: ba/b, no re-encode flags', () => {
     const args = buildDownloadArgs({ ...base, kind: 'audio_lossless' }, paths)
     expect(args[args.indexOf('-f') + 1]).toBe('ba/b')
@@ -97,6 +110,25 @@ describe('buildDownloadArgs', () => {
     const out = args[args.indexOf('-o') + 1]
     expect(out).toContain('%(title).150B')
     expect(out).toContain('%(id)s')
+  })
+
+  it('without tempDir: absolute -o, no -P (current behavior)', () => {
+    const args = buildDownloadArgs(base, paths)
+    expect(args).not.toContain('-P')
+    const out = args[args.indexOf('-o') + 1]
+    expect(out.startsWith('/out')).toBe(true)
+  })
+
+  it('with tempDir: isolates intermediate files via -P, relative -o', () => {
+    const args = buildDownloadArgs(base, paths, '/out/.mdl-tmp-123')
+    // -P は -o が絶対だと無視されるため、-o は相対テンプレートでなければならない
+    const out = args[args.indexOf('-o') + 1]
+    expect(out).toBe('%(title).150B [%(id)s].%(ext)s')
+    // home=出力先 / temp=隔離先
+    const pIdxs = args.reduce<number[]>((acc, a, i) => (a === '-P' ? [...acc, i] : acc), [])
+    const pValues = pIdxs.map((i) => args[i + 1])
+    expect(pValues).toContain('home:/out')
+    expect(pValues).toContain('temp:/out/.mdl-tmp-123')
   })
 })
 

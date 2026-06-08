@@ -1,4 +1,4 @@
-import { readdir, rm } from 'node:fs/promises'
+import { mkdir, rm } from 'node:fs/promises'
 import { join } from 'node:path'
 import { randomUUID } from 'node:crypto'
 import type { MediaEngine } from '../engine/MediaEngine'
@@ -83,10 +83,17 @@ export class JobQueue {
 
   private async run(job: Job): Promise<void> {
     const { id, req, controller } = job
+    // ジョブ専用の一時フォルダ。断片・中間ファイルはすべてここに隔離し、
+    // 最終ファイルのみ outputDir に置く。完了/失敗/中断のいずれでも丸ごと削除する。
+    // outputDir 直下に置くのは home と同一ファイルシステムにして最終 move を rename で
+    // 済ませる（大容量ファイルのコピーを避ける）ため。
+    const tempDir = join(req.outputDir, `.mdl-tmp-${id}`)
     try {
+      await mkdir(tempDir, { recursive: true })
       this.emit(id, 'analyzing')
       const result = await this.engine.download(req, {
         signal: controller.signal,
+        tempDir,
         onProgress: (p) => {
           job.status = p.status
           this.events.onProgress({ ...p, jobId: id })
@@ -98,29 +105,24 @@ export class JobQueue {
     } catch (e) {
       if (controller.signal.aborted) {
         job.status = 'cancelled'
-        await this.cleanupPartials(req.outputDir)
         this.events.onDone({ jobId: id, ok: false, error: { code: 'CANCELLED', userMessage: 'ダウンロードを中止しました。', detail: '' } })
         return
       }
       const error = e instanceof EngineError ? e.appError : classifyError(e instanceof Error ? e.message : String(e))
       job.status = 'failed'
       logger.error('job failed', { jobId: id, code: error.code })
-      await this.cleanupPartials(req.outputDir)
       this.events.onDone({ jobId: id, ok: false, error })
+    } finally {
+      await this.cleanupTemp(tempDir)
     }
   }
 
-  /** 中間ファイル（.part / .ytdl）の後始末。bounded・best-effort。 */
-  private async cleanupPartials(dir: string): Promise<void> {
+  /** ジョブ専用一時フォルダの後始末。bounded・best-effort。 */
+  private async cleanupTemp(tempDir: string): Promise<void> {
     try {
-      const entries = await readdir(dir)
-      await Promise.all(
-        entries
-          .filter((f) => f.endsWith('.part') || f.endsWith('.ytdl'))
-          .map((f) => rm(join(dir, f), { force: true }))
-      )
+      await rm(tempDir, { recursive: true, force: true })
     } catch {
-      // ディレクトリが無い等は無視
+      // 既に無い等は無視
     }
   }
 
