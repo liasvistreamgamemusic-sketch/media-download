@@ -238,6 +238,22 @@ fieldset.kinds label.disabled {
   cursor: pointer;
 }
 
+.applemusic {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.applemusic .subhint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-left: 26px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .actions {
   margin-top: 2px;
 }
@@ -276,9 +292,15 @@ fieldset.kinds label.disabled {
 
 .done {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-color: var(--ok);
+}
+
+.done-head {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  border-color: var(--ok);
 }
 
 .done-msg {
@@ -286,6 +308,13 @@ fieldset.kinds label.disabled {
   align-items: center;
   gap: 8px;
   color: var(--ok);
+}
+
+.applemusic-result {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .error {

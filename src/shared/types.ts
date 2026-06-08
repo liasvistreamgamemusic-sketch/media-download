@@ -64,11 +64,23 @@ export interface DownloadRequest {
   writeSubs?: boolean
   noPlaylist?: boolean
   cookiesFromBrowser?: BrowserForCookies | null
+  // 完了後に Apple Music（クラシック iTunes の自動追加フォルダ）へ追加するか
+  addToAppleMusic?: boolean
+  // 自動追加フォルダの明示指定。null/undefined なら既定の場所を自動検出する
+  itunesAutoAddDir?: string | null
+}
+
+/** Apple Music（iTunes 自動追加フォルダ）への追加結果。 */
+export interface AppleMusicOutcome {
+  attempted: boolean
+  added: boolean
+  message: string // ユーザー向け（日本語）
 }
 
 export interface DownloadResult {
   jobId: string
   outputPath: string | null
+  appleMusic?: AppleMusicOutcome
 }
 
 export type AppErrorCode =
@@ -97,6 +109,10 @@ export interface Settings {
   embedThumbnail: boolean
   disclaimerAccepted: boolean
   cookiesFromBrowser: BrowserForCookies | null
+  // 完了後に Apple Music へ自動追加する（クラシック iTunes 経由・iCloudでiPhoneへ同期）
+  addToAppleMusic: boolean
+  // iTunes 自動追加フォルダの明示指定（null なら自動検出）
+  itunesAutoAddDir: string | null
 }
 
 /** バイナリのパス解決結果（buildArgs に渡す） */

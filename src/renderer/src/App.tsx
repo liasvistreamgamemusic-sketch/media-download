@@ -54,11 +54,14 @@ export default function App(): React.JSX.Element {
   const [formatId, setFormatId] = useState<string>('') // '' = おまかせ最高
   const [outputDir, setOutputDir] = useState('')
   const [noPlaylist, setNoPlaylist] = useState(true)
+  const [addToAppleMusic, setAddToAppleMusic] = useState(false)
+  const [itunesDir, setItunesDir] = useState<string | null>(null)
 
   const [jobId, setJobId] = useState<string | null>(null)
   const [progress, setProgress] = useState<DownloadProgress | null>(null)
   const [jobError, setJobError] = useState<AppError | null>(null)
   const [done, setDone] = useState(false)
+  const [appleMusicMsg, setAppleMusicMsg] = useState<string | null>(null)
   const [showDetail, setShowDetail] = useState(false)
 
   const downloading = jobId !== null
@@ -69,6 +72,8 @@ export default function App(): React.JSX.Element {
       setSettings(s)
       setOutputDir(s.outputDir)
       setKind(s.defaultKind)
+      setAddToAppleMusic(s.addToAppleMusic)
+      setItunesDir(s.itunesAutoAddDir)
       if (!s.disclaimerAccepted) setShowDisclaimer(true)
     })
     void window.api.engineVersion().then(setEngineVer)
@@ -80,6 +85,7 @@ export default function App(): React.JSX.Element {
       if (d.ok) {
         setDone(true)
         setJobError(null)
+        setAppleMusicMsg(d.result.appleMusic?.message ?? null)
       } else if (d.error.code !== 'CANCELLED') {
         setJobError(d.error)
       }
@@ -128,6 +134,7 @@ export default function App(): React.JSX.Element {
     if (!info) return
     setJobError(null)
     setDone(false)
+    setAppleMusicMsg(null)
     try {
       const id = await window.api.startDownload({
         url: info.webpageUrl || url,
@@ -137,9 +144,28 @@ export default function App(): React.JSX.Element {
         embedMetadata: settings?.embedMetadata,
         embedThumbnail: settings?.embedThumbnail,
         noPlaylist: info.isPlaylist ? noPlaylist : undefined,
-        cookiesFromBrowser: settings?.cookiesFromBrowser ?? undefined
+        cookiesFromBrowser: settings?.cookiesFromBrowser ?? undefined,
+        addToAppleMusic,
+        itunesAutoAddDir: itunesDir ?? undefined
       })
       setJobId(id)
+    } catch (e) {
+      setJobError(toAppError(e))
+    }
+  }
+
+  function onToggleAppleMusic(checked: boolean): void {
+    setAddToAppleMusic(checked)
+    void window.api.setSettings({ addToAppleMusic: checked })
+  }
+
+  async function onPickItunesDir(): Promise<void> {
+    try {
+      const dir = await window.api.pickFolder()
+      if (dir) {
+        setItunesDir(dir)
+        void window.api.setSettings({ itunesAutoAddDir: dir })
+      }
     } catch (e) {
       setJobError(toAppError(e))
     }
@@ -285,6 +311,30 @@ export default function App(): React.JSX.Element {
         </button>
       </section>
 
+      <section className="applemusic">
+        <label className="checkbox">
+          <input
+            type="checkbox"
+            checked={addToAppleMusic}
+            onChange={(e) => onToggleAppleMusic(e.target.checked)}
+            disabled={downloading}
+          />
+          ダウンロード後に Apple Music へ追加（iTunes 経由・iCloudで iPhone に同期）
+        </label>
+        {addToAppleMusic && (
+          <div className="subhint">
+            <span>
+              {itunesDir
+                ? `追加先: ${itunesDir}`
+                : '※ クラシック iTunes が必要です。フォルダが自動検出できない場合は指定してください。'}
+            </span>
+            <button className="link" onClick={onPickItunesDir} disabled={downloading}>
+              {itunesDir ? 'フォルダを変更' : 'フォルダを指定'}
+            </button>
+          </div>
+        )}
+      </section>
+
       <section className="actions">
         {!downloading ? (
           <button className="primary big" onClick={onDownload} disabled={!info}>
@@ -320,14 +370,17 @@ export default function App(): React.JSX.Element {
 
       {done && (
         <section className="done">
-          <span className="done-msg">
-            <CircleCheck size={18} />
-            保存しました
-          </span>
-          <button onClick={() => window.api.openFolder(outputDir)}>
-            <FolderOpen size={16} />
-            保存先フォルダを開く
-          </button>
+          <div className="done-head">
+            <span className="done-msg">
+              <CircleCheck size={18} />
+              保存しました
+            </span>
+            <button onClick={() => window.api.openFolder(outputDir)}>
+              <FolderOpen size={16} />
+              保存先フォルダを開く
+            </button>
+          </div>
+          {appleMusicMsg && <p className="applemusic-result">{appleMusicMsg}</p>}
         </section>
       )}
 

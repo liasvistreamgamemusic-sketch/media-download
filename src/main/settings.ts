@@ -11,7 +11,9 @@ function defaults(): Settings {
     embedMetadata: true,
     embedThumbnail: true,
     disclaimerAccepted: false,
-    cookiesFromBrowser: null
+    cookiesFromBrowser: null,
+    addToAppleMusic: false,
+    itunesAutoAddDir: null
   }
 }
 

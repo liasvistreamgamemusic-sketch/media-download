@@ -5,11 +5,13 @@ import type { MediaEngine } from '../engine/MediaEngine'
 import { EngineError } from '../engine/YtDlpEngine'
 import { classifyError } from '../engine/classifyError'
 import type {
+  AppleMusicOutcome,
   DownloadProgress,
   DownloadRequest,
   JobDonePayload,
   JobStatus
 } from '../shared/types'
+import { addToAppleMusic } from './appleMusic'
 import { logger } from './logger'
 
 interface Job {
@@ -101,7 +103,12 @@ export class JobQueue {
       })
       job.status = 'completed'
       this.emit(id, 'completed')
-      this.events.onDone({ jobId: id, ok: true, result: { ...result, jobId: id } })
+      // 完了後の Apple Music 追加（ベストエフォート。失敗してもジョブは成功のまま）。
+      let appleMusic: AppleMusicOutcome | undefined
+      if (req.addToAppleMusic && result.outputPath) {
+        appleMusic = await addToAppleMusic(result.outputPath, req.itunesAutoAddDir ?? null)
+      }
+      this.events.onDone({ jobId: id, ok: true, result: { ...result, jobId: id, appleMusic } })
     } catch (e) {
       if (controller.signal.aborted) {
         job.status = 'cancelled'

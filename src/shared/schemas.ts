@@ -31,16 +31,22 @@ export const DownloadRequestSchema = z.object({
   embedThumbnail: z.boolean().optional(),
   writeSubs: z.boolean().optional(),
   noPlaylist: z.boolean().optional(),
-  cookiesFromBrowser: BrowserForCookiesSchema.nullish()
+  cookiesFromBrowser: BrowserForCookiesSchema.nullish(),
+  addToAppleMusic: z.boolean().optional(),
+  itunesAutoAddDir: z.string().nullish()
 })
 
+// 新規フィールドは .default() を付け、旧バージョンの保存済み設定（キー欠落）でも
+// 検証が通り既定値で埋まるようにする（設定の消失を防ぐ）。
 export const SettingsSchema = z.object({
   outputDir: z.string(),
   defaultKind: DownloadKindSchema,
   embedMetadata: z.boolean(),
   embedThumbnail: z.boolean(),
   disclaimerAccepted: z.boolean(),
-  cookiesFromBrowser: BrowserForCookiesSchema.nullable()
+  cookiesFromBrowser: BrowserForCookiesSchema.nullable(),
+  addToAppleMusic: z.boolean().default(false),
+  itunesAutoAddDir: z.string().nullable().default(null)
 })
 
 export const SettingsPatchSchema = SettingsSchema.partial()
