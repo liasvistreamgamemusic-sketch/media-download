@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildDownloadArgs, buildProbeArgs, PROGRESS_TEMPLATE } from './buildArgs'
+import path from 'node:path'
+import { buildDownloadArgs, buildProbeArgs, PROGRESS_TEMPLATE, OUTPUT_TEMPLATE } from './buildArgs'
 import type { BinPaths, DownloadRequest } from '../shared/types'
 
 const paths: BinPaths = { ytDlp: '/bin/yt-dlp', ffmpegDir: '/bin' }
@@ -116,7 +117,8 @@ describe('buildDownloadArgs', () => {
     const args = buildDownloadArgs(base, paths)
     expect(args).not.toContain('-P')
     const out = args[args.indexOf('-o') + 1]
-    expect(out.startsWith('/out')).toBe(true)
+    // path.join はプラットフォーム依存（Windows は \ 区切り）なので join 同士で比較する
+    expect(out).toBe(path.join('/out', OUTPUT_TEMPLATE))
   })
 
   it('with tempDir: isolates intermediate files via -P, relative -o', () => {
