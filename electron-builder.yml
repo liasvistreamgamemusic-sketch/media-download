@@ -65,4 +65,9 @@ dmg:
   artifactName: ${name}-${version}-mac-${arch}.${ext}
 
 # GitHub Release への発行は CI の softprops/action-gh-release が担当（.github/workflows/release.yml）。
-# electron-builder 自身の publisher は大容量アップロードで不安定なため使わない。
+# electron-builder 自身の publisher は大容量アップロードで不安定なため使わない（CI は --publish never）。
+# publish は「更新元情報の app への埋め込み」と latest*.yml 生成のために指定（electron-updater が参照）。
+publish:
+  provider: github
+  owner: liasvistreamgamemusic-sketch
+  repo: media-download

@@ -40,6 +40,9 @@ export function buildDownloadArgs(req: DownloadRequest, paths: BinPaths, tempDir
     PROGRESS_TEMPLATE
   ]
 
+  // 同梱 deno を JS ランタイムとして指定（YouTube 抽出の deprecation 警告・フォーマット欠落を防ぐ）。
+  if (paths.deno) args.push('--js-runtimes', `deno:${paths.deno}`)
+
   // 出力先と中間（断片）ファイルの置き場。tempDir 指定時は中間ファイルを隔離する。
   // 注意: -P は -o が絶対パスだと丸ごと無視される仕様。そのため tempDir 指定時は
   // -o を相対テンプレートにし、最終出力先=home / 中間=temp を -P で与える。
@@ -61,7 +64,10 @@ export function buildDownloadArgs(req: DownloadRequest, paths: BinPaths, tempDir
       args.push('-f', req.formatId ?? 'ba/b', '-x', '--audio-format', 'mp3', '--audio-quality', '0')
       break
     case 'audio_lossless':
-      args.push('-f', req.formatId ?? 'ba/b') // 再エンコードせず元コーデック維持
+      // -x: 元コーデックを維持したまま音声コンテナへリマックス（webm→opus, m4a→m4a）。
+      // --audio-format を付けない＝再エンコードなし。これでサムネ埋め込み対応コンテナになる
+      // （.webm は --embed-thumbnail 非対応のため -x 無しだと後処理で失敗する）。
+      args.push('-f', req.formatId ?? 'ba/b', '-x')
       break
   }
 
@@ -76,8 +82,10 @@ export function buildDownloadArgs(req: DownloadRequest, paths: BinPaths, tempDir
 }
 
 /** probe（--dump-single-json）用の引数。capability 判定に必要な情報だけ取る。 */
-export function buildProbeArgs(url: string, flat = false): string[] {
+export function buildProbeArgs(url: string, flat = false, denoPath?: string): string[] {
   const args = ['--ignore-config', '--no-color', '--no-warnings', '--dump-single-json']
+  // probe も YouTube に当たるため同梱 deno を指定（フォーマット欠落で誤判定を防ぐ）。
+  if (denoPath) args.push('--js-runtimes', `deno:${denoPath}`)
   if (flat) args.push('--flat-playlist')
   else args.push('--no-playlist')
   args.push('--', url)

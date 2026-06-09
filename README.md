@@ -61,9 +61,18 @@ git push origin v1.0.0
 ```
 
 タグ push で 3 ジョブ（Windows x64 / macOS arm64 / macOS x64）が起動し、各ランナーが
-ネイティブ arch の yt-dlp・ffmpeg・ffprobe を取得 → `electron-builder` でパッケージ →
+ネイティブ arch の yt-dlp・ffmpeg・ffprobe・deno を取得 → `electron-builder` でパッケージ →
 **GitHub Release（ドラフト）** に成果物をアップロードする。成果物を確認したら Release を
 **Publish** する。
+
+> **重要（自動更新）**: アプリの自動更新（Windows）と更新通知（macOS）はいずれも
+> **公開済み（draft でない・prerelease でない）の最新 Release** を参照する。Release を
+> **Publish し忘れると更新が利用者に届かない**ため、必ず Publish すること。
+>
+> - **Windows**: `electron-updater` で更新DL→再起動適用まで自動（無署名でも NSIS は更新可。
+>   初回起動の SmartScreen 警告は署名導入まで残る）。
+> - **macOS**: Squirrel.Mac が有効なコード署名を必須とするため自動更新は不可。新版があれば
+>   ダイアログで通知し、ダウンロードページを開く（手動更新）。
 
 ### ローカルビルド
 

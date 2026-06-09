@@ -119,6 +119,8 @@ export interface Settings {
 export interface BinPaths {
   ytDlp: string
   ffmpegDir: string
+  /** 同梱 deno のパス。存在する場合のみ設定（yt-dlp --js-runtimes deno:<path> 用） */
+  deno?: string
 }
 
 /** ジョブ完了イベント（成功 or 失敗の判別ユニオン） */

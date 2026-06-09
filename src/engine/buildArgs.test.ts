@@ -75,10 +75,20 @@ describe('buildDownloadArgs', () => {
     expect(args).toContain('-x')
   })
 
-  it('audio_lossless: ba/b, no re-encode flags', () => {
+  it('audio_lossless: ba/b, -x to remux into a thumbnail-capable container, no re-encode', () => {
     const args = buildDownloadArgs({ ...base, kind: 'audio_lossless' }, paths)
     expect(args[args.indexOf('-f') + 1]).toBe('ba/b')
-    expect(args).not.toContain('--audio-format')
+    expect(args).toContain('-x') // .webm はサムネ埋め込み非対応 → -x で opus/m4a 等へリマックス
+    expect(args).not.toContain('--audio-format') // --audio-format なし＝再エンコードしない
+  })
+
+  it('passes --js-runtimes deno:<path> only when deno is bundled', () => {
+    const without = buildDownloadArgs(base, paths)
+    expect(without).not.toContain('--js-runtimes')
+
+    const withDeno = buildDownloadArgs(base, { ...paths, deno: '/bin/deno' })
+    expect(withDeno).toContain('--js-runtimes')
+    expect(withDeno[withDeno.indexOf('--js-runtimes') + 1]).toBe('deno:/bin/deno')
   })
 
   it('toggles optional flags only when requested', () => {
@@ -147,5 +157,11 @@ describe('buildProbeArgs', () => {
     const args = buildProbeArgs('https://x/y', true)
     expect(args).toContain('--flat-playlist')
     expect(args).not.toContain('--no-playlist')
+  })
+
+  it('passes --js-runtimes deno:<path> only when deno path is provided', () => {
+    expect(buildProbeArgs('https://x/y')).not.toContain('--js-runtimes')
+    const args = buildProbeArgs('https://x/y', false, '/bin/deno')
+    expect(args[args.indexOf('--js-runtimes') + 1]).toBe('deno:/bin/deno')
   })
 })

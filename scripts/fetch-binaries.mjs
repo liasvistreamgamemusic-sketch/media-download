@@ -67,6 +67,28 @@ async function place(name, src) {
   console.log(`placed ${name} ← ${src}`)
 }
 
+// deno のリリース zip を取得し、中の単一バイナリを outPath へ展開する。
+//   asset 例: deno-aarch64-apple-darwin.zip / deno-x86_64-pc-windows-msvc.zip
+// 展開は Windows は tar（bsdtar が zip 対応）、その他は unzip を使う。
+async function fetchDenoBinary(asset, outPath) {
+  const url = `https://github.com/denoland/deno/releases/latest/download/${asset}`
+  const tmpZip = `${outPath}.zip`
+  const tmpDir = `${outPath}.extract`
+  console.log(`download deno: ${url}`)
+  const res = await fetch(url, { redirect: 'follow' })
+  if (!res.ok || !res.body) throw new Error(`HTTP ${res.status} for ${url}`)
+  await pipeline(res.body, createWriteStream(tmpZip))
+  await mkdir(tmpDir, { recursive: true })
+  if (targetOS === 'win32') await execFileP('tar', ['-xf', tmpZip, '-C', tmpDir])
+  else await execFileP('unzip', ['-o', '-j', tmpZip, '-d', tmpDir])
+  const inner = join(tmpDir, `deno${EXE}`)
+  await rm(outPath, { force: true })
+  await copyFile(inner, outPath)
+  if (EXE === '') await chmod(outPath, 0o755)
+  await rm(tmpZip, { force: true })
+  await rm(tmpDir, { recursive: true, force: true })
+}
+
 // ffmpeg-static のリリースから指定 arch の ffmpeg を取得（.gz を展開）して返す
 async function downloadFfmpeg(arch, outPath) {
   const cfg = require('ffmpeg-static/package.json')['ffmpeg-static']
@@ -116,7 +138,24 @@ async function buildUniversalMac() {
   }
   await place('ffprobe', ffprobeSrc)
 
-  console.log('\n完了（target=darwin universal）。resources/bin に yt-dlp / ffmpeg(universal) / ffprobe を配置しました。')
+  // deno: arm64 + x64 を取得して lipo でユニバーサル化（yt-dlp の JS ランタイム）
+  const denoDest = join(BIN, 'deno')
+  if (force || !(await exists(denoDest))) {
+    const da = join(BIN, '.deno-arm64')
+    const dx = join(BIN, '.deno-x64')
+    await fetchDenoBinary('deno-aarch64-apple-darwin.zip', da)
+    await fetchDenoBinary('deno-x86_64-apple-darwin.zip', dx)
+    await execFileP('lipo', ['-create', da, dx, '-output', denoDest])
+    await chmod(denoDest, 0o755)
+    await rm(da, { force: true })
+    await rm(dx, { force: true })
+    const { stdout } = await execFileP('lipo', ['-archs', denoDest])
+    console.log(`deno universal archs: ${stdout.trim()}`)
+  } else {
+    console.log(`skip (exists): ${denoDest}`)
+  }
+
+  console.log('\n完了（target=darwin universal）。resources/bin に yt-dlp / ffmpeg(universal) / ffprobe / deno を配置しました。')
 }
 
 async function buildForHost() {
@@ -145,7 +184,20 @@ async function buildForHost() {
   await place(`ffmpeg${EXE}`, ffmpegSrc)
   await place(`ffprobe${EXE}`, ffprobeSrc)
 
-  console.log(`\n完了（target=${targetOS}）。resources/bin に yt-dlp / ffmpeg / ffprobe を配置しました。`)
+  // deno（host arch。yt-dlp の YouTube 抽出に使う JS ランタイム）
+  const denoAsset =
+    targetOS === 'win32'
+      ? 'deno-x86_64-pc-windows-msvc.zip'
+      : targetOS === 'darwin'
+        ? process.arch === 'arm64'
+          ? 'deno-aarch64-apple-darwin.zip'
+          : 'deno-x86_64-apple-darwin.zip'
+        : 'deno-x86_64-unknown-linux-gnu.zip'
+  const denoDest = join(BIN, `deno${EXE}`)
+  if (force || !(await exists(denoDest))) await fetchDenoBinary(denoAsset, denoDest)
+  else console.log(`skip (exists): ${denoDest}`)
+
+  console.log(`\n完了（target=${targetOS}）。resources/bin に yt-dlp / ffmpeg / ffprobe / deno を配置しました。`)
 }
 
 async function main() {

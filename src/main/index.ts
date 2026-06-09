@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { registerIpcHandlers, getQueue } from './ipcHandlers'
 import { IPC } from '../shared/ipc'
 import { logger } from './logger'
+import { initAutoUpdate, checkForUpdatesManually } from './updater'
 
 function createWindow(): BrowserWindow {
   const win = new BrowserWindow({
@@ -49,6 +50,13 @@ function buildMenu(): void {
       label: 'ヘルプ',
       submenu: [
         {
+          label: '更新を確認',
+          click: () => {
+            const w = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
+            if (w) checkForUpdatesManually(w)
+          }
+        },
+        {
           label: '免責事項を再表示',
           click: () => {
             for (const w of BrowserWindow.getAllWindows()) {
@@ -71,7 +79,8 @@ app.whenReady().then(() => {
 
   registerIpcHandlers()
   buildMenu()
-  createWindow()
+  const win = createWindow()
+  initAutoUpdate(win)
   logger.info('app ready')
 
   app.on('activate', () => {

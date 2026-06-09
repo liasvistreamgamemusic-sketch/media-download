@@ -25,7 +25,7 @@ export class YtDlpEngine implements MediaEngine {
   constructor(private readonly paths: BinPaths) {}
 
   async probe(url: string, opts: ProbeOptions = {}): Promise<MediaInfo> {
-    const args = buildProbeArgs(url, opts.flat)
+    const args = buildProbeArgs(url, opts.flat, this.paths.deno)
     let stdout: string
     try {
       stdout = await runCapture(this.paths.ytDlp, args)

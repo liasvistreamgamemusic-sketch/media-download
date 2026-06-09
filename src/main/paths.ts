@@ -50,9 +50,12 @@ function findSystemFfmpegDir(): string | null {
 
 export function getBinPaths(): BinPaths {
   const root = resolveBinRoot()
+  const deno = join(root, `deno${EXE}`)
   return {
     ytDlp: join(root, `yt-dlp${EXE}`),
-    ffmpegDir: resolveFfmpegDir(root) // yt-dlp --ffmpeg-location にはディレクトリを渡す
+    ffmpegDir: resolveFfmpegDir(root), // yt-dlp --ffmpeg-location にはディレクトリを渡す
+    // 同梱 deno があれば yt-dlp の JS ランタイムとして指定（YouTube 抽出の警告/欠落を防ぐ）
+    deno: existsSync(deno) ? deno : undefined
   }
 }
 
