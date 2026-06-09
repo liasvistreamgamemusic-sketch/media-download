@@ -27,39 +27,79 @@ function isNewer(a: string, b: string): boolean {
   return false
 }
 
-let wired = false
+let winEventsWired = false
+
+/** update-downloaded（DL完了→再起動適用）のダイアログを一度だけ購読する。 */
+function wireWindowsEvents(win: BrowserWindow): void {
+  if (winEventsWired) return
+  winEventsWired = true
+  const autoUpdater = getAutoUpdater()
+  autoUpdater.on('error', (err) => logger.error('autoUpdater error', { err: String(err) }))
+  autoUpdater.on('update-downloaded', (info) => {
+    void dialog
+      .showMessageBox(win, {
+        type: 'info',
+        buttons: ['再起動して更新', '後で'],
+        defaultId: 0,
+        cancelId: 1,
+        title: 'アップデート',
+        message: `新しいバージョン ${info.version} をダウンロードしました。`,
+        detail: '再起動すると更新が適用されます。'
+      })
+      .then((r) => {
+        if (r.response === 0) autoUpdater.quitAndInstall()
+      })
+  })
+}
 
 /**
- * Windows: electron-updater で更新DL→再起動適用。NSIS は無署名でも更新可能。
- * イベント購読は一度だけ。checkForUpdates は手動/起動時で複数回呼ばれうる。
+ * Windows: electron-updater で更新を確認し、自動DL→再起動で適用（NSIS は無署名でも更新可）。
+ * manual=true（メニューから）は「最新です」「更新あり」「確認失敗」を必ずダイアログで返す。
+ * getAutoUpdater() の interop 失敗など同期エラーも握りつぶさず、手動時はダイアログ化する
+ *（無反応＝原因不明、を避ける）。
  */
-function initWindowsAutoUpdate(win: BrowserWindow): void {
-  const autoUpdater = getAutoUpdater()
-  autoUpdater.autoDownload = true
-  if (!wired) {
-    wired = true
-    autoUpdater.on('update-available', (info) =>
-      logger.info('update available', { version: info.version })
-    )
-    autoUpdater.on('update-not-available', () => logger.info('update not available'))
-    autoUpdater.on('error', (err) => logger.error('autoUpdater error', { err: String(err) }))
-    autoUpdater.on('update-downloaded', (info) => {
-      void dialog
-        .showMessageBox(win, {
+async function checkWindows(win: BrowserWindow, manual: boolean): Promise<void> {
+  try {
+    const autoUpdater = getAutoUpdater()
+    autoUpdater.autoDownload = true
+    wireWindowsEvents(win)
+    const result = await autoUpdater.checkForUpdates()
+    const latest = result?.updateInfo?.version
+    const available = !!latest && isNewer(latest, app.getVersion())
+    if (available) {
+      logger.info('update available', { version: latest })
+      if (manual) {
+        await dialog.showMessageBox(win, {
           type: 'info',
-          buttons: ['再起動して更新', '後で'],
-          defaultId: 0,
-          cancelId: 1,
+          buttons: ['OK'],
           title: 'アップデート',
-          message: `新しいバージョン ${info.version} をダウンロードしました。`,
-          detail: '再起動すると更新が適用されます。'
+          message: `新しいバージョン ${latest} が見つかりました。`,
+          detail: 'バックグラウンドでダウンロードし、完了したら再起動をご案内します。'
         })
-        .then((r) => {
-          if (r.response === 0) autoUpdater.quitAndInstall()
+      }
+    } else {
+      logger.info('update not available', { latest })
+      if (manual) {
+        await dialog.showMessageBox(win, {
+          type: 'info',
+          buttons: ['OK'],
+          title: 'アップデート',
+          message: `最新バージョンを使用しています（${app.getVersion()}）。`
         })
-    })
+      }
+    }
+  } catch (e) {
+    logger.error('checkForUpdates failed', { e: String(e) })
+    if (manual) {
+      await dialog.showMessageBox(win, {
+        type: 'warning',
+        buttons: ['OK'],
+        title: 'アップデート',
+        message: 'アップデートの確認に失敗しました。',
+        detail: e instanceof Error ? e.message : String(e)
+      })
+    }
   }
-  autoUpdater.checkForUpdates().catch((e) => logger.error('checkForUpdates failed', { e: String(e) }))
 }
 
 /**
@@ -109,11 +149,11 @@ async function checkMacUpdate(win: BrowserWindow, manual: boolean): Promise<void
 /** 起動時の自動チェック。dev（未パッケージ）ではスキップ。 */
 export function initAutoUpdate(win: BrowserWindow): void {
   if (!app.isPackaged) return
-  if (process.platform === 'win32') initWindowsAutoUpdate(win)
+  if (process.platform === 'win32') void checkWindows(win, false)
   else if (process.platform === 'darwin') void checkMacUpdate(win, false)
 }
 
-/** メニューからの手動チェック。 */
+/** メニューからの手動チェック。結果は必ずダイアログで通知する。 */
 export function checkForUpdatesManually(win: BrowserWindow): void {
   if (process.platform === 'win32') {
     if (!app.isPackaged) {
@@ -125,7 +165,7 @@ export function checkForUpdatesManually(win: BrowserWindow): void {
       })
       return
     }
-    initWindowsAutoUpdate(win)
+    void checkWindows(win, true)
   } else if (process.platform === 'darwin') {
     void checkMacUpdate(win, true)
   }
