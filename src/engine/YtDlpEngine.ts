@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { buildDownloadArgs, buildProbeArgs } from './buildArgs'
 import { parseProgressLine, parseDownloadPercent } from './parseProgress'
 import { parseMediaInfo } from './parseMediaInfo'
@@ -48,7 +50,9 @@ export class YtDlpEngine implements MediaEngine {
   }
 
   async download(req: DownloadRequest, hooks: DownloadHooks): Promise<DownloadResult> {
-    const args = buildDownloadArgs(req, this.paths, hooks.tempDir)
+    // 最終パスは UTF-8 で書かれる print-to-file から取得する（cp932 等の stdout 化けを回避）。
+    const printPathFile = hooks.tempDir ? join(hooks.tempDir, '.mdl-filepath.txt') : undefined
+    const args = buildDownloadArgs(req, this.paths, hooks.tempDir, printPathFile)
 
     let finalPath: string | null = null
     // 優先度: ExtractAudio/Merger/Fixup（最終生成物） > Destination/already
@@ -78,7 +82,23 @@ export class YtDlpEngine implements MediaEngine {
     if (res.exitCode !== 0) {
       throw new EngineError(classifyError(res.stderr))
     }
-    return { jobId: '', outputPath: finalPath }
+
+    // print-to-file（UTF-8）の最終パスを優先。読めなければ stdout パース結果にフォールバック。
+    let outputPath: string | null = finalPath
+    if (printPathFile) {
+      try {
+        const txt = await readFile(printPathFile, 'utf8')
+        const last = txt
+          .split(/\r?\n/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+          .pop()
+        if (last) outputPath = last
+      } catch {
+        // ファイルが無い/読めない場合は finalPath を使う
+      }
+    }
+    return { jobId: '', outputPath }
   }
 
   async engineVersion(): Promise<string> {

@@ -31,7 +31,12 @@ export const OUTPUT_TEMPLATE = '%(title).150B [%(id)s].%(ext)s'
  * DownloadRequest + BinPaths から yt-dlp の引数配列を組み立てる純粋関数。
  * I/O・乱数・時刻を一切使わない。
  */
-export function buildDownloadArgs(req: DownloadRequest, paths: BinPaths, tempDir?: string): string[] {
+export function buildDownloadArgs(
+  req: DownloadRequest,
+  paths: BinPaths,
+  tempDir?: string,
+  printPathFile?: string
+): string[] {
   const args = [
     ...BASE_FLAGS,
     '--ffmpeg-location',
@@ -42,6 +47,11 @@ export function buildDownloadArgs(req: DownloadRequest, paths: BinPaths, tempDir
 
   // 同梱 deno を JS ランタイムとして指定（YouTube 抽出の deprecation 警告・フォーマット欠落を防ぐ）。
   if (paths.deno) args.push('--js-runtimes', `deno:${paths.deno}`)
+
+  // 最終ファイルパスを UTF-8 のファイルへ書き出す（yt-dlp の print-to-file は UTF-8 固定）。
+  // コンソール出力(cp932 等)のパースに依存せず、後段の Apple Music 追加等で確実なパスを得る。
+  // after_move:filepath は移動後（=最終保存先）に評価され、--simulate を誘発しない。
+  if (printPathFile) args.push('--print-to-file', 'after_move:filepath', printPathFile)
 
   // 出力先と中間（断片）ファイルの置き場。tempDir 指定時は中間ファイルを隔離する。
   // 注意: -P は -o が絶対パスだと丸ごと無視される仕様。そのため tempDir 指定時は

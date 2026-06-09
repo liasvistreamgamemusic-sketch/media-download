@@ -134,6 +134,18 @@ describe('buildDownloadArgs', () => {
     expect(out).toContain('%(id)s')
   })
 
+  it('writes the final path to a UTF-8 file via --print-to-file when printPathFile is given', () => {
+    const args = buildDownloadArgs(base, paths, '/out/.tmp', '/out/.tmp/filepath.txt')
+    const i = args.indexOf('--print-to-file')
+    expect(i).toBeGreaterThan(-1)
+    expect(args[i + 1]).toBe('after_move:filepath')
+    expect(args[i + 2]).toBe('/out/.tmp/filepath.txt')
+  })
+
+  it('omits --print-to-file when no printPathFile is given', () => {
+    expect(buildDownloadArgs(base, paths, '/out/.tmp')).not.toContain('--print-to-file')
+  })
+
   it('without tempDir: absolute -o, no -P (current behavior)', () => {
     const args = buildDownloadArgs(base, paths)
     expect(args).not.toContain('-P')

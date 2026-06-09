@@ -15,9 +15,10 @@ export type LineHandler = (line: string, stream: 'out' | 'err') => void
 // 非 ASCII のファイル名を cp932 で stdout に出力する。これを UTF-8 として読むと
 // 「」【】等が mojibake になり、出力パスのパース→後段のコピー等が ENOENT で失敗する
 // （ファイル自体は NTFS 上に正しい名前で存在する。化けるのは報告される文字列だけ）。
-// Python の stdio を UTF-8 に固定し、stdout/stderr を常に UTF-8 として解釈できるようにする。
-// ※ファイル名のディスク生成は OS API 経由で元々正しいため、ここでは stdio のみ UTF-8 化する。
-const UTF8_IO_ENV = { PYTHONIOENCODING: 'utf-8' }
+// PYTHONUTF8=1（UTF-8 モード）でロケールに依存せず stdio/ファイル I/O を UTF-8 に強制する。
+// PYTHONIOENCODING だけでは frozen 版で効かないことがあるため UTF-8 モードを併用する。
+// ※ファイル名のディスク生成は OS API（Windows は UTF-16）経由で元々正しいため影響しない。
+const UTF8_IO_ENV = { PYTHONUTF8: '1', PYTHONIOENCODING: 'utf-8' }
 
 function bindLineReader(stream: Readable | undefined | null, onLine: (l: string) => void): void {
   if (!stream) return
