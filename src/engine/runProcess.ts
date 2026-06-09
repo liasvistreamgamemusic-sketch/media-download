@@ -11,6 +11,14 @@ export interface RunResult {
 
 export type LineHandler = (line: string, stream: 'out' | 'err') => void
 
+// 日本語版 Windows などコンソールのコードページが cp932 の環境では、yt-dlp(Python) が
+// 非 ASCII のファイル名を cp932 で stdout に出力する。これを UTF-8 として読むと
+// 「」【】等が mojibake になり、出力パスのパース→後段のコピー等が ENOENT で失敗する
+// （ファイル自体は NTFS 上に正しい名前で存在する。化けるのは報告される文字列だけ）。
+// Python の stdio を UTF-8 に固定し、stdout/stderr を常に UTF-8 として解釈できるようにする。
+// ※ファイル名のディスク生成は OS API 経由で元々正しいため、ここでは stdio のみ UTF-8 化する。
+const UTF8_IO_ENV = { PYTHONIOENCODING: 'utf-8' }
+
 function bindLineReader(stream: Readable | undefined | null, onLine: (l: string) => void): void {
   if (!stream) return
   const rl = readline.createInterface({ input: stream, crlfDelay: Infinity })
@@ -43,6 +51,7 @@ export async function runYtDlp(
     windowsHide: true,
     buffer: false,
     encoding: 'utf8',
+    env: UTF8_IO_ENV, // execa は既定で process.env を継承し、ここで上書き追加する
     reject: false,
     // POSIX では detached でプロセスグループを作り、ツリー kill の確実性を上げる
     detached: process.platform !== 'win32',
@@ -83,7 +92,12 @@ export async function runYtDlp(
 
 /** 単発実行（version 取得等）。stdout 全体を返す。 */
 export async function runCapture(binPath: string, args: string[]): Promise<string> {
-  const res = await execa(binPath, args, { windowsHide: true, reject: false, encoding: 'utf8' })
+  const res = await execa(binPath, args, {
+    windowsHide: true,
+    reject: false,
+    encoding: 'utf8',
+    env: UTF8_IO_ENV // probe(JSON) の日本語タイトル等も cp932 mojibake を防ぐ
+  })
   if (res.exitCode !== 0) {
     throw new Error(res.stderr || `exit ${res.exitCode}`)
   }

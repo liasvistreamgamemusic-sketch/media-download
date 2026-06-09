@@ -72,6 +72,15 @@ export async function addToAppleMusic(
     }
   }
 
+  if (!existsSync(outputPath)) {
+    logger.error('addToAppleMusic: source not found', { outputPath })
+    return {
+      attempted: true,
+      added: false,
+      message: `追加元のファイルが見つかりませんでした：${outputPath}`
+    }
+  }
+
   const dir = resolveAutoAddDir(configuredDir)
   if (!dir) {
     return {

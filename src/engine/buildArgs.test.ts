@@ -82,6 +82,17 @@ describe('buildDownloadArgs', () => {
     expect(args).not.toContain('--audio-format') // --audio-format なし＝再エンコードしない
   })
 
+  it('audio_lossless + addToAppleMusic: converts to ALAC (.m4a) for Apple compatibility', () => {
+    const args = buildDownloadArgs({ ...base, kind: 'audio_lossless', addToAppleMusic: true }, paths)
+    expect(args).toContain('-x')
+    expect(args[args.indexOf('--audio-format') + 1]).toBe('alac')
+  })
+
+  it('audio_lossless without addToAppleMusic: keeps original codec (no --audio-format)', () => {
+    const args = buildDownloadArgs({ ...base, kind: 'audio_lossless' }, paths)
+    expect(args).not.toContain('--audio-format')
+  })
+
   it('passes --js-runtimes deno:<path> only when deno is bundled', () => {
     const without = buildDownloadArgs(base, paths)
     expect(without).not.toContain('--js-runtimes')

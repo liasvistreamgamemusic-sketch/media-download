@@ -68,6 +68,9 @@ export function buildDownloadArgs(req: DownloadRequest, paths: BinPaths, tempDir
       // --audio-format を付けない＝再エンコードなし。これでサムネ埋め込み対応コンテナになる
       // （.webm は --embed-thumbnail 非対応のため -x 無しだと後処理で失敗する）。
       args.push('-f', req.formatId ?? 'ba/b', '-x')
+      // Apple Music 追加時は opus 等が非対応のため ALAC（Apple ロスレス, .m4a）へ変換する。
+      // ALAC はロスレスなので opus 音源からの追加劣化はなく、.m4a は iTunes に取り込める。
+      if (req.addToAppleMusic) args.push('--audio-format', 'alac')
       break
   }
 
