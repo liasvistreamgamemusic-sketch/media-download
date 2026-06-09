@@ -38,6 +38,10 @@ export function parseMediaInfo(json: unknown): MediaInfo {
     playlistCount: raw.entries?.length ?? null,
     hasVideo: formats.some((f) => f.isVideo), // SoundCloud は false
     hasAudio: formats.some((f) => f.isAudio),
-    formats
+    formats,
+    // メタデータ編集欄のプリフィル（取得できたものだけ。無ければ null → UI 側で uploader 等にフォールバック）
+    artist: raw.artist ?? raw.creator ?? null,
+    album: raw.album ?? null,
+    description: raw.description ?? null
   }
 }

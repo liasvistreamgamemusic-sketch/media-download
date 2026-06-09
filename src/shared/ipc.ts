@@ -15,6 +15,8 @@ export const IPC = {
   JOB_DONE: 'media:job:done', // main → renderer: JobDonePayload
   PICK_FOLDER: 'dialog:pickFolder', // () => string | null
   OPEN_FOLDER: 'shell:openFolder', // (path: string) => void
+  RESOLVE_ITUNES_DIR: 'media:applemusic:dir', // (configured: string|null) => string|null
+
   GET_SETTINGS: 'settings:get', // () => Settings
   SET_SETTINGS: 'settings:set', // (Partial<Settings>) => Settings
   ENGINE_VERSION: 'engine:version', // () => string
@@ -31,6 +33,8 @@ export interface Api {
   cancelDownload(jobId: string): Promise<void>
   pickFolder(): Promise<string | null>
   openFolder(path: string): Promise<void>
+  /** iTunes 自動追加フォルダを解決（設定優先→自動検出）。未検出なら null */
+  resolveItunesDir(configured: string | null): Promise<string | null>
   getSettings(): Promise<Settings>
   setSettings(patch: Partial<Settings>): Promise<Settings>
   engineVersion(): Promise<string>

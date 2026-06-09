@@ -10,6 +10,7 @@ const api: Api = {
   cancelDownload: (jobId) => ipcRenderer.invoke(IPC.DOWNLOAD_CANCEL, jobId),
   pickFolder: () => ipcRenderer.invoke(IPC.PICK_FOLDER),
   openFolder: (path) => ipcRenderer.invoke(IPC.OPEN_FOLDER, path),
+  resolveItunesDir: (configured) => ipcRenderer.invoke(IPC.RESOLVE_ITUNES_DIR, configured),
   getSettings: () => ipcRenderer.invoke(IPC.GET_SETTINGS),
   setSettings: (patch: Partial<Settings>) => ipcRenderer.invoke(IPC.SET_SETTINGS, patch),
   engineVersion: () => ipcRenderer.invoke(IPC.ENGINE_VERSION),

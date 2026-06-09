@@ -6,12 +6,14 @@ import { EngineError } from '../engine/YtDlpEngine'
 import { classifyError } from '../engine/classifyError'
 import type {
   AppleMusicOutcome,
+  BinPaths,
   DownloadProgress,
   DownloadRequest,
   JobDonePayload,
   JobStatus
 } from '../shared/types'
 import { addToAppleMusic } from './appleMusic'
+import { applyMetadata, hasMetadataOverride } from '../engine/applyMetadata'
 import { logger } from './logger'
 
 interface Job {
@@ -38,6 +40,7 @@ export class JobQueue {
 
   constructor(
     private readonly engine: MediaEngine,
+    private readonly binPaths: BinPaths,
     private readonly events: JobQueueEvents
   ) {}
 
@@ -101,6 +104,16 @@ export class JobQueue {
           this.events.onProgress({ ...p, jobId: id })
         }
       })
+      // メタデータ上書き（DL後に ffmpeg で埋め込みタグへ反映。ベストエフォート）。
+      // Apple Music コピーより前に行い、コピーされるファイルもタグ済みにする。
+      if (result.outputPath && hasMetadataOverride(req.metadata)) {
+        try {
+          await applyMetadata(this.binPaths.ffmpegDir, result.outputPath, req.metadata!)
+        } catch (e) {
+          logger.error('applyMetadata failed', { jobId: id, error: String(e) })
+        }
+      }
+
       job.status = 'completed'
       this.emit(id, 'completed')
       // 完了後の Apple Music 追加（ベストエフォート。失敗してもジョブは成功のまま）。

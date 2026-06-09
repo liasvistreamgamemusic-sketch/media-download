@@ -33,7 +33,15 @@ export const DownloadRequestSchema = z.object({
   noPlaylist: z.boolean().optional(),
   cookiesFromBrowser: BrowserForCookiesSchema.nullish(),
   addToAppleMusic: z.boolean().optional(),
-  itunesAutoAddDir: z.string().nullish()
+  itunesAutoAddDir: z.string().nullish(),
+  metadata: z
+    .object({
+      title: z.string().optional(),
+      artist: z.string().optional(),
+      album: z.string().optional(),
+      comment: z.string().optional()
+    })
+    .optional()
 })
 
 // 新規フィールドは .default() を付け、旧バージョンの保存済み設定（キー欠落）でも
@@ -74,6 +82,11 @@ export const RawInfoSchema = z
     id: z.union([z.string(), z.number()]).transform(String),
     title: z.string(),
     uploader: z.string().nullish(),
+    artist: z.string().nullish(),
+    creator: z.string().nullish(),
+    album: z.string().nullish(),
+    track: z.string().nullish(),
+    description: z.string().nullish(),
     duration: z.number().nullish(),
     thumbnail: z.string().nullish(),
     webpage_url: z.string().nullish(),

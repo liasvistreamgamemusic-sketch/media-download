@@ -6,6 +6,7 @@ import { IPC } from '../shared/ipc'
 import { DownloadRequestSchema, SettingsPatchSchema, UrlSchema } from '../shared/schemas'
 import { YtDlpEngine } from '../engine/YtDlpEngine'
 import { JobQueue } from './JobQueue'
+import { resolveAutoAddDir } from './appleMusic'
 import { getBinPaths } from './paths'
 import { getSettings, setSettings } from './settings'
 import { logger } from './logger'
@@ -37,8 +38,9 @@ function broadcast(channel: string, payload: unknown): void {
 }
 
 export function registerIpcHandlers(): JobQueue {
-  const engine = new YtDlpEngine(getBinPaths())
-  queue = new JobQueue(engine, {
+  const paths = getBinPaths()
+  const engine = new YtDlpEngine(paths)
+  queue = new JobQueue(engine, paths, {
     onProgress: (p) => broadcast(IPC.PROGRESS, p),
     onDone: (p) => broadcast(IPC.JOB_DONE, p)
   })
@@ -73,6 +75,13 @@ export function registerIpcHandlers(): JobQueue {
   ipcMain.handle(IPC.OPEN_FOLDER, async (_e, p: unknown): Promise<void> => {
     const path = z.string().min(1).parse(p)
     await shell.openPath(path)
+  })
+
+  // iTunes 自動追加フォルダの解決（設定優先→既定候補を自動検出）。見つからなければ null。
+  // 「追加フォルダを開く」ボタン用。
+  ipcMain.handle(IPC.RESOLVE_ITUNES_DIR, async (_e, configured: unknown): Promise<string | null> => {
+    const dir = z.string().nullish().parse(configured)
+    return resolveAutoAddDir(dir)
   })
 
   ipcMain.handle(IPC.GET_SETTINGS, async () => getSettings())

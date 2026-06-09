@@ -31,6 +31,10 @@ export interface MediaInfo {
   hasVideo: boolean // capability フラグ（UI 適応に使う）
   hasAudio: boolean
   formats: FormatOption[]
+  // メタデータ編集欄のプリフィル用（取得できなければ null）
+  artist: string | null
+  album: string | null
+  description: string | null
 }
 
 export type JobStatus =
@@ -54,6 +58,14 @@ export interface DownloadProgress {
 
 export type BrowserForCookies = 'chrome' | 'edge' | 'firefox'
 
+/** ダウンロード前にユーザーが編集する埋め込みメタデータの上書き値（空文字/未指定は上書きしない）。 */
+export interface MetadataOverride {
+  title?: string
+  artist?: string
+  album?: string
+  comment?: string // UI 上の「説明」
+}
+
 export interface DownloadRequest {
   url: string
   kind: DownloadKind
@@ -68,6 +80,8 @@ export interface DownloadRequest {
   addToAppleMusic?: boolean
   // 自動追加フォルダの明示指定。null/undefined なら既定の場所を自動検出する
   itunesAutoAddDir?: string | null
+  // タイトル/アーティスト/アルバム/説明 の上書き（DL後に ffmpeg で埋め込みタグへ反映）
+  metadata?: MetadataOverride
 }
 
 /** Apple Music（iTunes 自動追加フォルダ）への追加結果。 */

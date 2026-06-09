@@ -61,6 +61,46 @@ describe('parseMediaInfo', () => {
     expect(info.hasAudio).toBe(true)
   })
 
+  it('prefills artist/album/description from raw fields (with creator fallback)', () => {
+    const info = parseMediaInfo({
+      id: 'x',
+      title: 't',
+      creator: 'Some Creator',
+      album: 'My Album',
+      description: 'hello\nworld',
+      webpage_url: 'https://e/x',
+      extractor: 'test',
+      formats: [{ format_id: '1', ext: 'm4a', vcodec: 'none', acodec: 'mp4a' }]
+    })
+    expect(info.artist).toBe('Some Creator') // artist 欠落時は creator にフォールバック
+    expect(info.album).toBe('My Album')
+    expect(info.description).toBe('hello\nworld')
+  })
+
+  it('artist prefers raw.artist over creator; null when absent', () => {
+    const withArtist = parseMediaInfo({
+      id: 'x',
+      title: 't',
+      artist: 'The Artist',
+      creator: 'ignored',
+      webpage_url: 'https://e/x',
+      extractor: 'test',
+      formats: []
+    })
+    expect(withArtist.artist).toBe('The Artist')
+
+    const none = parseMediaInfo({
+      id: 'x',
+      title: 't',
+      webpage_url: 'https://e/x',
+      extractor: 'test',
+      formats: []
+    })
+    expect(none.artist).toBeNull()
+    expect(none.album).toBeNull()
+    expect(none.description).toBeNull()
+  })
+
   it('coerces numeric id/format_id to string', () => {
     const info = parseMediaInfo({
       id: 12345,
