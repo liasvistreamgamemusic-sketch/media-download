@@ -1,0 +1,56 @@
+#!/usr/bin/env node
+// テスト用の偽 yt-dlp。MediaDownloader が渡す引数の契約（-P home/temp, -o, --print-to-file, -- URL）
+// だけを実装し、URL のホスト名で挙動を切り替える。
+const fs = require('node:fs')
+const path = require('node:path')
+
+const args = process.argv.slice(2)
+if (args[0] === '--version') {
+  console.log('2099.01.01-fake')
+  process.exit(0)
+}
+if (args.includes('--dump-single-json')) {
+  console.log(JSON.stringify({ id: 'x1', title: 'Fake', formats: [{ format_id: '18', ext: 'mp4', vcodec: 'h264', acodec: 'aac' }] }))
+  process.exit(0)
+}
+const val = (flag) => {
+  const i = args.indexOf(flag)
+  return i >= 0 ? args[i + 1] : undefined
+}
+const ps = args.flatMap((a, i) => (a === '-P' ? [args[i + 1]] : []))
+const home = ps.find((p) => p.startsWith('home:')).slice(5)
+const temp = ps.find((p) => p.startsWith('temp:')).slice(5)
+const printIdx = args.indexOf('--print-to-file')
+const printFile = args[printIdx + 2]
+const url = args[args.length - 1]
+const host = new URL(url).hostname
+
+function produce(name) {
+  // 断片を temp に書いてから home へ移す（yt-dlp の -P temp の挙動を模す）
+  const part = path.join(temp, `${name}.part`)
+  fs.writeFileSync(part, 'data')
+  const final = path.join(home, name)
+  fs.renameSync(part, final)
+  fs.appendFileSync(printFile, final + '\n')
+}
+
+switch (host) {
+  case 'ok':
+    console.log('[PROG]|downloading|50|100|NA|10|5')
+    console.log('[PROG]|finished|100|100|NA|10|0')
+    produce(`Fake 日本語 [x1].${val('--merge-output-format') ?? 'm4a'}`)
+    break
+  case 'playlist':
+    produce('one [a].mp3')
+    produce('two [b].mp3')
+    break
+  case 'fail':
+    fs.writeFileSync(path.join(temp, 'leftover.part'), 'x')
+    console.error('ERROR: Unsupported URL: ' + url)
+    process.exit(1)
+  case 'hang':
+    fs.writeFileSync(path.join(temp, 'leftover.part'), 'x')
+    console.log('[PROG]|downloading|1|100|NA|1|99')
+    setInterval(() => {}, 1000)
+    break
+}

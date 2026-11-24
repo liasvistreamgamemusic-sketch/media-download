@@ -4,6 +4,10 @@ URL を貼り付けるだけで YouTube・SoundCloud・ニコニコ動画・Clou
 
 設計の詳細は [`plan.md`](./plan.md) を参照。
 
+> **他のプロジェクトから使う場合**: ダウンロード機能はアプリから切り出し、ライブラリ兼 CLI
+> [`packages/core`](./packages/core/README.md)（`@liasvistreamgamemusic-sketch/media-dl`）として独立させている。
+> URL・出力形式・保存先を渡すだけでファイルを保存できる。
+
 ## ダウンロード（利用者向け）
 
 [Releases](https://github.com/liasvistreamgamemusic-sketch/media-download/releases) から OS に合ったファイルを入手する。
@@ -44,8 +48,9 @@ npm run fetch-binaries        # resources/bin に yt-dlp / ffmpeg / ffprobe を�
 
 ```bash
 npm run dev          # electron-vite dev（HMR）
-npm run typecheck    # main(node) + renderer(web) を tsc で型チェック
-npm test             # 純粋関数のユニットテスト（vitest）
+npm run typecheck    # core + main(node) + renderer(web) を tsc で型チェック
+npm test             # core（偽 yt-dlp による結合テスト含む）+ アプリ側のユニットテスト（vitest）
+npm run build:core   # packages/core を dist/ にビルド（アプリの開発・ビルドには不要）
 npm run test:coverage
 ```
 
@@ -94,15 +99,18 @@ CI では再生成不要。
 ## アーキテクチャ
 
 ```
-Renderer (React) ──IPC(型付き)──▶ Main (Node) ──MediaEngine IF──▶ YtDlpEngine ──spawn(配列)──▶ yt-dlp ─▶ ffmpeg
+Renderer (React) ──IPC(型付き)──▶ Main (Node) ──▶ packages/core: MediaDownloader ──spawn(配列)──▶ yt-dlp ─▶ ffmpeg
+                                                        ▲
+                                    他プロジェクト / CLI（media-dl）も同じ入口を使う
 ```
 
-- **エンジン層 `src/engine/`** が共通化の核。yt-dlp 呼び出しはここに閉じ込める。純粋関数（`buildArgs` / `parseProgress` / `classifyError` / `parseMediaInfo`）と I/O（`runProcess`）を分離。
+- **エンジン層 `packages/core/`**（npm workspace）が共通化の核。yt-dlp 呼び出し・出力形式の定義・バイナリ探索・一時ファイルの隔離はここに閉じ込め、アプリとほかのプロジェクトで共有する。純粋関数（`buildArgs` / `parseProgress` / `classifyError` / `parseMediaInfo` / `formats`）と I/O（`runProcess` / `MediaDownloader`）を分離。
+- アプリは core のソースを直接バンドルする（`core-alias.config.ts`）。開発時に core を先にビルドする必要はない。
 - **サイト固有ロジックを持たない**。振る舞いは probe の `hasVideo`/`hasAudio`（capability）から導出する（例：SoundCloud は音声のみ→動画モード自動無効化）。
-- **共有型は `src/shared/`** に集約（`types.ts` / `ipc.ts` / `schemas.ts`）。
+- **アプリ固有の共有型は `src/shared/`** に集約（`types.ts` / `ipc.ts` / `schemas.ts`）。メディア関連の型と検証は core のものを再利用する。
 - **セキュリティ**: `contextIsolation: true` / `nodeIntegration: false` / `sandbox: true`。子プロセスは配列引数のみで起動（`shell` 不使用）。IPC ペイロードは Main 側で zod 再検証。
 
-ディレクトリ構成は `plan.md` 17章に準拠。
+ディレクトリ構成は `plan.md` 17章を基点に、エンジン層を `packages/core` へ移している。
 
 ## 同梱バージョン（再現性のため記録）
 

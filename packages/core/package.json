@@ -1,0 +1,53 @@
+{
+  "name": "@liasvistreamgamemusic-sketch/media-dl",
+  "version": "0.1.0",
+  "description": "URL・出力形式・保存先を指定するだけでメディアファイルを保存するライブラリ兼 CLI（yt-dlp + ffmpeg）",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liasvistreamgamemusic-sketch/media-download.git",
+    "directory": "packages/core"
+  },
+  "engines": {
+    "node": ">=20.19"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./formats": {
+      "types": "./dist/formats.d.ts",
+      "default": "./dist/formats.js"
+    },
+    "./humanize": {
+      "types": "./dist/humanize.d.ts",
+      "default": "./dist/humanize.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "media-dl": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "prepack": "npm run build"
+  },
+  "dependencies": {
+    "execa": "^9.6.1",
+    "tree-kill": "^1.2.2",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.8"
+  }
+}

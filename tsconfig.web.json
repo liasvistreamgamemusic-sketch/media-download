@@ -4,16 +4,24 @@
     "src/renderer/src/**/*",
     "src/renderer/src/**/*.tsx",
     "src/preload/*.d.ts",
-    "src/shared/**/*",
-    "src/engine/**/*"
+    "src/shared/**/*"
   ],
   "compilerOptions": {
     "composite": true,
     "baseUrl": ".",
     "paths": {
-      "@renderer/*": ["src/renderer/src/*"],
-      "@shared/*": ["src/shared/*"],
-      "@engine/*": ["src/engine/*"]
+      "@renderer/*": [
+        "src/renderer/src/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@liasvistreamgamemusic-sketch/media-dl": [
+        "packages/core/src/index.ts"
+      ],
+      "@liasvistreamgamemusic-sketch/media-dl/*": [
+        "packages/core/src/*"
+      ]
     }
   }
 }

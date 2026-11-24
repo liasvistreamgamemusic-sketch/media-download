@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildMetadataFfmpegArgs, hasMetadataOverride } from './applyMetadata'
+import { buildMetadataFfmpegArgs, hasMetadataOverride } from './applyMetadata.js'
 
 describe('hasMetadataOverride', () => {
   it('false for undefined / all-empty / whitespace-only', () => {

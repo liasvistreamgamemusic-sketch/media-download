@@ -212,33 +212,6 @@ button.link {
   margin-top: 4px;
 }
 
-fieldset.kinds {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-fieldset.kinds legend {
-  color: var(--muted);
-  font-size: 12px;
-  padding: 0 6px;
-}
-
-fieldset.kinds label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
-
-fieldset.kinds label.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 .hint {
   color: var(--muted);
   font-size: 12px;

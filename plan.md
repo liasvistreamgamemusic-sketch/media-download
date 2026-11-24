@@ -2,6 +2,11 @@
 
 > URL を貼り付けるだけで、YouTube・SoundCloud・ニコニコ動画・CloudFront 等から高品質なメディアをローカル保存できる **Windows デスクトップアプリ**。
 > このドキュメントは AI コーディングエージェント（Claude Code）に渡して実装させることを前提とした、設計・契約・受け入れ基準を含む実装指示書です。
+>
+> **更新（2026-11）**: 6 章のエンジン層（`src/engine/`）は、他プロジェクトからも使えるよう
+> npm workspace の `packages/core`（ライブラリ兼 CLI）へ移した。`MediaEngine` / `YtDlpEngine` は
+> `MediaDownloader` に、種別（`DownloadKind`）は出力形式（`OutputFormat`）に置き換えている。
+> 現行の構成は [README](./README.md) と [packages/core/README.md](./packages/core/README.md) を参照。
 
 ---
 

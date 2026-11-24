@@ -13,22 +13,25 @@ import {
   X
 } from 'lucide-react'
 import { DisclaimerModal } from './components/DisclaimerModal'
-import { formatBytes, formatDuration, formatSpeed } from './format'
+import {
+  FORMAT_SPECS,
+  OUTPUT_FORMATS,
+  isOutputFormat,
+  isVideoFormat
+} from '@liasvistreamgamemusic-sketch/media-dl/formats'
+import { formatBytes, formatDuration, formatSpeed } from '@liasvistreamgamemusic-sketch/media-dl/humanize'
 import type {
   AppError,
-  DownloadKind,
   DownloadProgress,
   FormatOption,
   MediaInfo,
   MetadataOverride,
+  OutputFormat,
   Settings
 } from '@shared/types'
 
-const KIND_LABEL: Record<DownloadKind, string> = {
-  video_best: '動画（最高画質 mp4）',
-  audio_mp3: '音声 mp3（最高音質）',
-  audio_lossless: '音声 無劣化（元コーデック）'
-}
+const VIDEO_FORMATS = OUTPUT_FORMATS.filter((f) => isVideoFormat(f))
+const AUDIO_FORMATS = OUTPUT_FORMATS.filter((f) => !isVideoFormat(f))
 
 interface MetaFields {
   title: string
@@ -95,7 +98,7 @@ export default function App(): React.JSX.Element {
   const [items, setItems] = useState<Item[]>([])
   const [probeErrors, setProbeErrors] = useState<{ url: string; error: AppError }[]>([])
 
-  const [kind, setKind] = useState<DownloadKind>('video_best')
+  const [format, setFormat] = useState<OutputFormat>('mp4')
   const [outputDir, setOutputDir] = useState('')
   const [addToAppleMusic, setAddToAppleMusic] = useState(false)
   const [itunesDir, setItunesDir] = useState<string | null>(null)
@@ -112,7 +115,7 @@ export default function App(): React.JSX.Element {
     void window.api.getSettings().then((s) => {
       setSettings(s)
       setOutputDir(s.outputDir)
-      setKind(s.defaultKind)
+      setFormat(s.defaultFormat)
       setAddToAppleMusic(s.addToAppleMusic)
       setItunesDir(s.itunesAutoAddDir)
       if (!s.disclaimerAccepted) setShowDisclaimer(true)
@@ -151,9 +154,9 @@ export default function App(): React.JSX.Element {
     }
   }, [])
 
-  // 共有種別から item の実効種別を導出（音声のみソースでは動画→無劣化に読み替え）。
-  function effectiveKindFor(info: MediaInfo): DownloadKind {
-    return !info.hasVideo && kind === 'video_best' ? 'audio_lossless' : kind
+  // 共有の出力形式から item の実効形式を導出（音声のみソースでは動画形式→無劣化音声に読み替え）。
+  function effectiveFormatFor(info: MediaInfo): OutputFormat {
+    return !info.hasVideo && isVideoFormat(format) ? 'audio' : format
   }
 
   function patchItem(key: string, patch: Partial<Item>): void {
@@ -166,9 +169,10 @@ export default function App(): React.JSX.Element {
     )
   }
 
-  function changeKind(k: DownloadKind): void {
-    setKind(k)
-    // 種別が変わると品質候補も変わるため formatId をリセット（おまかせ最高に戻す）。
+  function changeFormat(f: OutputFormat): void {
+    setFormat(f)
+    void window.api.setSettings({ defaultFormat: f })
+    // 形式が変わると品質候補も変わるため formatId をリセット（おまかせ最高に戻す）。
     setItems((prev) => prev.map((it) => ({ ...it, formatId: '' })))
   }
 
@@ -218,7 +222,7 @@ export default function App(): React.JSX.Element {
     setActionError(null)
     const newTasks: Task[] = []
     for (const it of items) {
-      const eff = effectiveKindFor(it.info)
+      const eff = effectiveFormatFor(it.info)
       const dirty =
         it.meta.title !== it.prefill.title ||
         it.meta.artist !== it.prefill.artist ||
@@ -228,12 +232,12 @@ export default function App(): React.JSX.Element {
       try {
         const id = await window.api.startDownload({
           url: it.url,
-          kind: eff,
-          formatId: it.formatId || undefined,
+          format: eff,
+          formatSelector: it.formatId || undefined,
           outputDir,
           embedMetadata: settings?.embedMetadata,
           embedThumbnail: settings?.embedThumbnail,
-          noPlaylist: true,
+          playlist: false,
           cookiesFromBrowser: settings?.cookiesFromBrowser ?? undefined,
           addToAppleMusic,
           itunesAutoAddDir: itunesDir ?? undefined,
@@ -361,27 +365,37 @@ export default function App(): React.JSX.Element {
 
       {items.length > 0 && (
         <>
-          <fieldset className="kinds">
-            <legend>種別（全件に適用）</legend>
-            {(Object.keys(KIND_LABEL) as DownloadKind[]).map((k) => (
-              <label key={k}>
-                <input
-                  type="radio"
-                  name="kind"
-                  checked={kind === k}
-                  onChange={() => changeKind(k)}
-                />
-                {KIND_LABEL[k]}
-              </label>
-            ))}
-          </fieldset>
+          <label className="field output-format">
+            出力形式（全件に適用）
+            <select
+              value={format}
+              onChange={(e) => {
+                if (isOutputFormat(e.target.value)) changeFormat(e.target.value)
+              }}
+            >
+              <optgroup label="動画">
+                {VIDEO_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {FORMAT_SPECS[f].label}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label="音声">
+                {AUDIO_FORMATS.map((f) => (
+                  <option key={f} value={f}>
+                    {FORMAT_SPECS[f].label}
+                  </option>
+                ))}
+              </optgroup>
+            </select>
+          </label>
 
           <section className="items">
             {items.map((it) => (
               <ItemCard
                 key={it.key}
                 item={it}
-                effectiveKind={effectiveKindFor(it.info)}
+                effectiveFormat={effectiveFormatFor(it.info)}
                 onChange={(patch) => patchItem(it.key, patch)}
                 onMeta={(patch) => patchMeta(it.key, patch)}
                 onRemove={() => setItems((prev) => prev.filter((x) => x.key !== it.key))}
@@ -475,22 +489,21 @@ export default function App(): React.JSX.Element {
 
 function ItemCard({
   item,
-  effectiveKind,
+  effectiveFormat,
   onChange,
   onMeta,
   onRemove
 }: {
   item: Item
-  effectiveKind: DownloadKind
+  effectiveFormat: OutputFormat
   onChange: (patch: Partial<Item>) => void
   onMeta: (patch: Partial<MetaFields>) => void
   onRemove: () => void
 }): React.JSX.Element {
   const { info, meta } = item
-  const choices =
-    effectiveKind === 'video_best'
-      ? info.formats.filter((f) => f.isVideo)
-      : info.formats.filter((f) => f.isAudio)
+  const choices = isVideoFormat(effectiveFormat)
+    ? info.formats.filter((f) => f.isVideo)
+    : info.formats.filter((f) => f.isAudio)
 
   return (
     <div className="item">
