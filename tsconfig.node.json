@@ -2,18 +2,28 @@
   "extends": "@electron-toolkit/tsconfig/tsconfig.node.json",
   "include": [
     "electron.vite.config.*",
+    "core-alias.config.ts",
     "src/main/**/*",
     "src/preload/**/*",
-    "src/shared/**/*",
-    "src/engine/**/*"
+    "src/shared/**/*"
   ],
   "compilerOptions": {
     "composite": true,
-    "types": ["electron-vite/node", "node"],
+    "types": [
+      "electron-vite/node",
+      "node"
+    ],
     "baseUrl": ".",
     "paths": {
-      "@shared/*": ["src/shared/*"],
-      "@engine/*": ["src/engine/*"]
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@liasvistreamgamemusic-sketch/media-dl": [
+        "packages/core/src/index.ts"
+      ],
+      "@liasvistreamgamemusic-sketch/media-dl/*": [
+        "packages/core/src/*"
+      ]
     }
   }
 }

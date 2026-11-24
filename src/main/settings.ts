@@ -1,13 +1,13 @@
 import Store from 'electron-store'
 import { app } from 'electron'
-import { SettingsSchema } from '../shared/schemas'
+import { migrateSettings, SettingsSchema } from '../shared/schemas'
 import type { Settings } from '../shared/types'
 import { logger } from './logger'
 
 function defaults(): Settings {
   return {
     outputDir: app.getPath('downloads'),
-    defaultKind: 'video_best',
+    defaultFormat: 'mp4',
     embedMetadata: true,
     embedThumbnail: true,
     disclaimerAccepted: false,
@@ -21,7 +21,7 @@ const store = new Store<{ settings: Settings }>({ name: 'config' })
 
 export function getSettings(): Settings {
   const raw = store.get('settings')
-  const parsed = SettingsSchema.safeParse(raw)
+  const parsed = SettingsSchema.safeParse(migrateSettings(raw))
   if (parsed.success) return parsed.data
   // 破損 / 未設定はデフォルトにフォールバック（14章）
   if (raw !== undefined) logger.warn('settings corrupted, using defaults')

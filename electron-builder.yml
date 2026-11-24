@@ -19,6 +19,9 @@ files:
   - "!plan.md"
   - "!electron.vite.config.ts"
   - "!vitest.config.ts"
+  - "!core-alias.config.ts"
+  # core（workspace パッケージ）は main にバンドル済みのためソースは同梱しない
+  - "!packages"
   - "!electron-builder.yml"
   - "!tsconfig*.json"
 # yt-dlp / ffmpeg / ffprobe（静的バイナリ）を同梱。本番では process.resourcesPath/bin に展開される。

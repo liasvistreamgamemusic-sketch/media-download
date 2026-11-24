@@ -3,6 +3,9 @@
   "version": "1.4.0",
   "description": "URL を貼り付けるだけで高品質メディアをローカル保存するデスクトップアプリ（Windows / macOS）",
   "main": "./out/main/index.js",
+  "workspaces": [
+    "packages/*"
+  ],
   "author": "liasvistreamgamemusic-sketch",
   "license": "MIT",
   "repository": {
@@ -12,13 +15,15 @@
   "scripts": {
     "dev": "electron-vite dev",
     "build": "npm run typecheck && electron-vite build",
+    "build:core": "npm run build -w packages/core",
     "start": "electron-vite preview",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json --composite false",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json --composite false",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web",
-    "test": "vitest run",
+    "typecheck:core": "npm run typecheck -w packages/core",
+    "typecheck": "npm run typecheck:core && npm run typecheck:node && npm run typecheck:web",
+    "test": "npm test -w packages/core && vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage && npm test -w packages/core -- --coverage",
     "fetch-binaries": "node scripts/fetch-binaries.mjs",
     "make-icons": "node scripts/make-icons.mjs",
     "package:win": "npm run build && electron-builder --win",

@@ -1,0 +1,40 @@
+name: CI
+
+# push / PR ごとに型チェックとテストを回す（リリースビルドは release.yml）。
+on:
+  push:
+    branches: ['**']
+    tags-ignore: ['**']
+  pull_request: {}
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: typecheck + test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows は偽 yt-dlp（shebang スクリプト）を使う結合テストを skip する
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck (core / main / renderer)
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Build core package
+        run: npm run build:core

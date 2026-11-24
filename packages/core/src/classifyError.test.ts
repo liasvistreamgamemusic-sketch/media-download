@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyError } from './classifyError'
+import { classifyError } from './classifyError.js'
 
 const cases: Array<[string, string]> = [
   ['ERROR: Unsupported URL: https://example.com/foo', 'UNSUPPORTED_URL'],

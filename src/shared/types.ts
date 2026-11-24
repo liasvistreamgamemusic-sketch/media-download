@@ -1,41 +1,20 @@
-// ドメイン型・エラー型（唯一の真実）。main / preload / renderer / engine で共有する。
+// アプリ固有のドメイン型。メディア取得に関わる型は core パッケージが唯一の真実で、ここでは再エクスポートする。
 // このファイルは electron に依存しない（純粋な型定義のみ）。
+import type {
+  CookieBrowser,
+  DownloadProgress as CoreProgress,
+  DownloadSpec,
+  MediaErrorInfo,
+  OutputFormat
+} from '@liasvistreamgamemusic-sketch/media-dl'
 
-export type DownloadKind = 'video_best' | 'audio_mp3' | 'audio_lossless'
-
-export interface FormatOption {
-  formatId: string
-  ext: string
-  resolution: string | null
-  fps: number | null
-  vcodec: string | null
-  acodec: string | null
-  abr: number | null
-  tbr: number | null
-  filesize: number | null
-  isVideo: boolean
-  isAudio: boolean
-  note: string | null
-}
-
-export interface MediaInfo {
-  id: string
-  title: string
-  uploader: string | null
-  durationSec: number | null
-  thumbnailUrl: string | null
-  webpageUrl: string
-  extractor: string
-  isPlaylist: boolean
-  playlistCount: number | null
-  hasVideo: boolean // capability フラグ（UI 適応に使う）
-  hasAudio: boolean
-  formats: FormatOption[]
-  // メタデータ編集欄のプリフィル用（取得できなければ null）
-  artist: string | null
-  album: string | null
-  description: string | null
-}
+export type {
+  CookieBrowser,
+  FormatOption,
+  MediaInfo,
+  MetadataOverride,
+  OutputFormat
+} from '@liasvistreamgamemusic-sketch/media-dl'
 
 export type JobStatus =
   | 'queued'
@@ -46,42 +25,17 @@ export type JobStatus =
   | 'failed'
   | 'cancelled'
 
-export interface DownloadProgress {
+export interface DownloadProgress extends Omit<CoreProgress, 'status'> {
   jobId: string
   status: JobStatus
-  percent: number | null
-  downloadedBytes: number | null
-  totalBytes: number | null
-  speedBps: number | null
-  etaSec: number | null
 }
 
-export type BrowserForCookies = 'chrome' | 'edge' | 'firefox'
-
-/** ダウンロード前にユーザーが編集する埋め込みメタデータの上書き値（空文字/未指定は上書きしない）。 */
-export interface MetadataOverride {
-  title?: string
-  artist?: string
-  album?: string
-  comment?: string // UI 上の「説明」
-}
-
-export interface DownloadRequest {
-  url: string
-  kind: DownloadKind
-  formatId?: string // 明示選択時のみ。おまかせなら undefined
-  outputDir: string
-  embedMetadata?: boolean
-  embedThumbnail?: boolean
-  writeSubs?: boolean
-  noPlaylist?: boolean
-  cookiesFromBrowser?: BrowserForCookies | null
+/** renderer → main のダウンロード依頼。core の DownloadSpec に Apple Music 連携を足したもの。 */
+export interface DownloadRequest extends DownloadSpec {
   // 完了後に Apple Music（クラシック iTunes の自動追加フォルダ）へ追加するか
   addToAppleMusic?: boolean
   // 自動追加フォルダの明示指定。null/undefined なら既定の場所を自動検出する
   itunesAutoAddDir?: string | null
-  // タイトル/アーティスト/アルバム/説明 の上書き（DL後に ffmpeg で埋め込みタグへ反映）
-  metadata?: MetadataOverride
 }
 
 /** Apple Music（iTunes 自動追加フォルダ）への追加結果。 */
@@ -93,48 +47,23 @@ export interface AppleMusicOutcome {
 
 export interface DownloadResult {
   jobId: string
-  outputPath: string | null
+  files: string[]
   appleMusic?: AppleMusicOutcome
 }
 
-export type AppErrorCode =
-  | 'UNSUPPORTED_URL'
-  | 'UNAVAILABLE'
-  | 'GEO_BLOCKED'
-  | 'AGE_RESTRICTED'
-  | 'NETWORK'
-  | 'AUTH_REQUIRED'
-  | 'FFMPEG_MISSING'
-  | 'ENGINE_OUTDATED'
-  | 'DISK'
-  | 'CANCELLED'
-  | 'UNKNOWN'
-
-export interface AppError {
-  code: AppErrorCode
-  userMessage: string
-  detail: string
-}
+export type AppError = MediaErrorInfo
 
 export interface Settings {
   outputDir: string
-  defaultKind: DownloadKind
+  defaultFormat: OutputFormat
   embedMetadata: boolean
   embedThumbnail: boolean
   disclaimerAccepted: boolean
-  cookiesFromBrowser: BrowserForCookies | null
+  cookiesFromBrowser: CookieBrowser | null
   // 完了後に Apple Music へ自動追加する（クラシック iTunes 経由・iCloudでiPhoneへ同期）
   addToAppleMusic: boolean
   // iTunes 自動追加フォルダの明示指定（null なら自動検出）
   itunesAutoAddDir: string | null
-}
-
-/** バイナリのパス解決結果（buildArgs に渡す） */
-export interface BinPaths {
-  ytDlp: string
-  ffmpegDir: string
-  /** 同梱 deno のパス。存在する場合のみ設定（yt-dlp --js-runtimes deno:<path> 用） */
-  deno?: string
 }
 
 /** ジョブ完了イベント（成功 or 失敗の判別ユニオン） */

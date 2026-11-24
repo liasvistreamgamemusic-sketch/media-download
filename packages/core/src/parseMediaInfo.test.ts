@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseMediaInfo } from './parseMediaInfo'
+import { parseMediaInfo } from './parseMediaInfo.js'
 
 const fixture = (name: string): unknown =>
-  JSON.parse(readFileSync(join(__dirname, '..', '..', 'test', 'fixtures', name), 'utf8'))
+  JSON.parse(readFileSync(join(__dirname, '..', 'test', 'fixtures', name), 'utf8'))
 
 describe('parseMediaInfo', () => {
   it('YouTube: has both video and audio', () => {
@@ -47,6 +47,24 @@ describe('parseMediaInfo', () => {
     expect(info.formats[0].isAudio).toBe(false)
     expect(info.formats[1].resolution).toBeNull()
     expect(info.formats[1].isAudio).toBe(true)
+  })
+
+  it('generic/html5 (codec unknown, video_ext set): treated as video with audio', () => {
+    // 実出力（yt-dlp 2026.11.23 の html5 抽出器）を最小化したもの。vcodec=null, acodec 欠落。
+    const info = parseMediaInfo(fixture('generic.json'))
+    expect(info.extractor).toBe('html5')
+    expect(info.hasVideo).toBe(true)
+    expect(info.hasAudio).toBe(true)
+  })
+
+  it('codec unknown + audio_ext only: audio, not video', () => {
+    const info = parseMediaInfo({
+      id: 'x',
+      title: 't',
+      formats: [{ format_id: '1', ext: 'mp3', vcodec: null, video_ext: 'none', audio_ext: 'mp3' }]
+    })
+    expect(info.hasVideo).toBe(false)
+    expect(info.hasAudio).toBe(true)
   })
 
   it('treats vcodec "none" as no video', () => {

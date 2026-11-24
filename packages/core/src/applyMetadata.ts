@@ -1,9 +1,8 @@
 import { rename, rm } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
-import { runCapture } from './runProcess'
-import type { MetadataOverride } from '../shared/types'
-
-const EXE = process.platform === 'win32' ? '.exe' : ''
+import { exeName } from './binaries.js'
+import { runCapture } from './runProcess.js'
+import type { MetadataOverride } from './types.js'
 
 /** 非空の上書きフィールドが1つでもあるか（空文字・空白のみは「指定なし」扱い）。 */
 export function hasMetadataOverride(meta?: MetadataOverride): boolean {
@@ -39,7 +38,7 @@ export function buildMetadataFfmpegArgs(
 /**
  * ダウンロード済みファイルの埋め込みタグをユーザー指定値で上書きする。
  * 同ディレクトリに一時ファイルを書き出してから元ファイルへ置換する（in-place 不可のため）。
- * 上書き対象が無ければ何もしない。失敗は呼び出し側で握って best-effort 扱いにする。
+ * 上書き対象が無ければ何もしない。失敗は throw する（呼び出し側が警告として扱う）。
  */
 export async function applyMetadata(
   ffmpegDir: string,
@@ -47,11 +46,17 @@ export async function applyMetadata(
   meta: MetadataOverride
 ): Promise<void> {
   if (!hasMetadataOverride(meta)) return
-  const ffmpeg = join(ffmpegDir, `ffmpeg${EXE}`)
+  const ffmpeg = join(ffmpegDir, exeName('ffmpeg'))
   const ext = extname(filePath)
   const tmp = join(dirname(filePath), `${basename(filePath, ext)}.mdl-meta${ext}`)
   const args = buildMetadataFfmpegArgs(filePath, tmp, meta)
-  await runCapture(ffmpeg, args) // 非ゼロ終了は throw される
-  await rm(filePath, { force: true })
+  try {
+    await runCapture(ffmpeg, args) // 非ゼロ終了は throw される
+  } catch (e) {
+    // 書きかけの一時ファイルを出力先に残さない（元ファイルは無傷のまま）
+    await rm(tmp, { force: true })
+    throw e
+  }
+  // rename は同一ディレクトリ内なので上書き置換になる（Windows でも Node の rename は既存を置換する）
   await rename(tmp, filePath)
 }

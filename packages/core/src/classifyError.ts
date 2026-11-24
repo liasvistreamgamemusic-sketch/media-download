@@ -1,8 +1,8 @@
-import type { AppError, AppErrorCode } from '../shared/types'
+import type { MediaErrorCode, MediaErrorInfo } from './types.js'
 
-// stderr → AppErrorCode のヒューリスティック分類。正規表現は yt-dlp の文言変更で
+// stderr → MediaErrorCode のヒューリスティック分類。正規表現は yt-dlp の文言変更で
 // 陳腐化しうるため、未一致は UNKNOWN とし必ず生ログを保持する（plan.md 6.6 / 12章）。
-const RULES: Array<{ test: RegExp; code: AppErrorCode; msg: string }> = [
+const RULES: Array<{ test: RegExp; code: MediaErrorCode; msg: string }> = [
   {
     test: /Unsupported URL|is not a valid URL/i,
     code: 'UNSUPPORTED_URL',
@@ -47,11 +47,11 @@ const RULES: Array<{ test: RegExp; code: AppErrorCode; msg: string }> = [
   {
     test: /Please update|out.?of.?date|nsig extraction failed|Signature extraction failed/i,
     code: 'ENGINE_OUTDATED',
-    msg: 'エンジンの更新が必要かもしれません（更新ボタンをお試しください）。'
+    msg: 'yt-dlp の更新が必要かもしれません（アプリの更新ボタン、または `media-dl update`）。'
   }
 ]
 
-export function classifyError(stderr: string): AppError {
+export function classifyError(stderr: string): MediaErrorInfo {
   for (const r of RULES) {
     if (r.test.test(stderr)) {
       return { code: r.code, userMessage: r.msg, detail: stderr }

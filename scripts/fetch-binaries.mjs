@@ -8,6 +8,9 @@
 //   --mac-universal  macOS 用に arm64+x64 ユニバーサル ffmpeg を lipo で合成（Intel/Apple Silicon 両対応）
 //
 // すべて静的バイナリのため配布パッケージにそのまま同梱できる（システムの ffmpeg 非依存）。
+//
+// 注: packages/core の `media-dl setup`（src/setup.ts）も同じ配布元から取得する。こちらはアプリ同梱用
+// （mac ユニバーサル合成・ffprobe-static の利用）で要件が異なるため別実装。取得元を変えるときは両方を直すこと。
 import { createRequire } from 'node:module'
 import { execFile } from 'node:child_process'
 import { mkdir, chmod, access, rm, copyFile, writeFile } from 'node:fs/promises'

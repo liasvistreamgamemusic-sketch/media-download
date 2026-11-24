@@ -1,0 +1,21 @@
+{
+  "id": "page-1",
+  "title": "テストページ (1)",
+  "extractor": "html5",
+  "extractor_key": "HTML5MediaEmbed",
+  "webpage_url": "https://example.com/page.html",
+  "original_url": "https://example.com/page.html",
+  "_type": "video",
+  "ext": "webm",
+  "formats": [
+    {
+      "url": "https://example.com/clip.webm",
+      "vcodec": null,
+      "ext": "webm",
+      "protocol": "http",
+      "video_ext": "webm",
+      "audio_ext": "none",
+      "format_id": "0"
+    }
+  ]
+}

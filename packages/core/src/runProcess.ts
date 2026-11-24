@@ -60,8 +60,8 @@ export async function runYtDlp(
     stderr: 'pipe'
   })
 
-  // detached でプロセスグループを作った場合、親の event loop を専有しないよう unref する。
-  if (process.platform !== 'win32') child.unref()
+  // 注意: child.unref() はしない。CLI のように他に待ち受けが無いプロセスでは、
+  // unref すると子の終了通知を受け取る前に Node が終了してしまう。
 
   let killed = false
   const stderrChunks: string[] = []

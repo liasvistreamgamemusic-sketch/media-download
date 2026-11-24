@@ -1,7 +1,8 @@
 name: Release
 
-# タグ v* を push するとトリガー。各OSランナーがビルドし、成果物を
-# GitHub Release（ドラフト）にアップロードする。
+# タグ v* を push するとトリガー。各OSランナーがアプリをビルドし、成果物を
+# GitHub Release（ドラフト）にアップロードする。他プロジェクト向けの core パッケージ
+# （packages/core）の tarball も同じ Release に添付する。
 on:
   push:
     tags:
@@ -69,3 +70,31 @@ jobs:
             release/*.zip
             release/*.blockmap
             release/latest*.yml
+
+  core-package:
+    name: core package (tarball)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck and test core
+        run: npm run typecheck:core && npm test -w packages/core
+
+      # prepack で dist をビルドしてから tarball を作る
+      - name: Pack
+        run: npm pack -w packages/core --pack-destination pack
+
+      - name: Upload to GitHub Release (draft)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          files: pack/*.tgz

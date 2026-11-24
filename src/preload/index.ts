@@ -32,13 +32,6 @@ const api: Api = {
   }
 }
 
-if (process.contextIsolated) {
-  try {
-    contextBridge.exposeInMainWorld('api', api)
-  } catch (error) {
-    console.error(error)
-  }
-} else {
-  // @ts-ignore (sandbox 無効時のフォールバック)
-  window.api = api
-}
+// contextIsolation は main で常に有効（index.ts の webPreferences）。無効化された場合に
+// window へ直接生やすフォールバックは持たない（renderer に Node 側の参照を渡さないため）。
+contextBridge.exposeInMainWorld('api', api)

@@ -2,12 +2,12 @@ import { BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import { accessSync, constants, statSync } from 'node:fs'
 import { isAbsolute } from 'node:path'
 import { z } from 'zod'
+import { MediaDownloader } from '@liasvistreamgamemusic-sketch/media-dl'
 import { IPC } from '../shared/ipc'
 import { DownloadRequestSchema, SettingsPatchSchema, UrlSchema } from '../shared/schemas'
-import { YtDlpEngine } from '../engine/YtDlpEngine'
 import { JobQueue } from './JobQueue'
 import { resolveAutoAddDir } from './appleMusic'
-import { getBinPaths } from './paths'
+import { getBinaryOptions } from './paths'
 import { getSettings, setSettings } from './settings'
 import { logger } from './logger'
 import type { MediaInfo } from '../shared/types'
@@ -38,17 +38,16 @@ function broadcast(channel: string, payload: unknown): void {
 }
 
 export function registerIpcHandlers(): JobQueue {
-  const paths = getBinPaths()
-  const engine = new YtDlpEngine(paths)
-  queue = new JobQueue(engine, paths, {
+  const engine = new MediaDownloader(getBinaryOptions())
+  queue = new JobQueue(engine, {
     onProgress: (p) => broadcast(IPC.PROGRESS, p),
     onDone: (p) => broadcast(IPC.JOB_DONE, p)
   })
 
-  // probe: URL を zod 検証してから（信頼境界の内側で再検証）
+  // probe: URL を zod 検証してから（信頼境界の内側で再検証）。ログインが要るサイトのため cookie 設定も渡す。
   ipcMain.handle(IPC.PROBE, async (_e, url: unknown): Promise<MediaInfo> => {
     const safe = UrlSchema.parse(url)
-    return engine.probe(safe)
+    return engine.probe(safe, { cookiesFromBrowser: getSettings().cookiesFromBrowser ?? undefined })
   })
 
   ipcMain.handle(IPC.DOWNLOAD_START, async (_e, req: unknown): Promise<string> => {
@@ -100,7 +99,15 @@ export function registerIpcHandlers(): JobQueue {
     }
   })
 
-  ipcMain.handle(IPC.ENGINE_UPDATE, async (): Promise<string> => engine.updateEngine())
+  // 同梱版が Program Files 配下だと権限不足で失敗しうる（plan.md 16.3）。失敗時も文言を UI に返す。
+  ipcMain.handle(IPC.ENGINE_UPDATE, async (): Promise<string> => {
+    try {
+      return await engine.updateEngine()
+    } catch (e) {
+      logger.error('updateEngine failed', { error: String(e) })
+      return e instanceof Error ? e.message : String(e)
+    }
+  })
 
   return queue
 }
