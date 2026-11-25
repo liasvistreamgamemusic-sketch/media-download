@@ -7,10 +7,20 @@ on:
   push:
     tags:
       - 'v*'
-  workflow_dispatch: {}
+  # 手動実行は既存タグの作り直し用。main のワークフロー定義で、指定したタグの
+  # コードをビルドし、そのタグの Release に添付する。
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'ビルドして Release に添付するタグ（例: v1.5.0）'
+        required: true
+        type: string
 
 permissions:
   contents: write
+
+env:
+  RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
   build:
@@ -26,13 +36,15 @@ jobs:
             fetch: npm run fetch-binaries
           # Apple Silicon ランナーで Intel+arm64 ユニバーサル app をビルド
           # （Intel 専用 macos-13 ランナーの空き待ちを回避）。
-          - os: macos-14
+          - os: macos-15
             label: macOS (universal)
             args: --mac --universal
             fetch: npm run fetch-binaries -- --mac-universal
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: actions/setup-node@v4
         with:
@@ -61,7 +73,7 @@ jobs:
       - name: Upload to GitHub Release (draft)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           draft: true
           fail_on_unmatched_files: false
           files: |
@@ -76,6 +88,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - uses: actions/setup-node@v4
         with:
@@ -88,13 +102,14 @@ jobs:
       - name: Typecheck and test core
         run: npm run typecheck:core && npm test -w packages/core
 
-      # prepack で dist をビルドしてから tarball を作る
+      # prepack で dist をビルドしてから tarball を作る。
+      # npm は --pack-destination のフォルダを作らないので先に用意する。
       - name: Pack
-        run: npm pack -w packages/core --pack-destination pack
+        run: mkdir -p pack && npm pack -w packages/core --pack-destination pack
 
       - name: Upload to GitHub Release (draft)
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ env.RELEASE_TAG }}
           draft: true
           files: pack/*.tgz
